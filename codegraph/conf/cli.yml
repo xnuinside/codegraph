@@ -1,0 +1,17 @@
+parser:
+  prog: 'CodeGraph'
+  description: 'Tool that create a graph of code to show dependencies between code entities (methods, classes and etc).
+    CodeGraph does not execute code, it is based only on lex and syntax parse'
+
+commands:
+   - keys: ['-v', '--version']
+     help: "show CodeGraph version"
+     action: show_version()
+     default: True
+   - keys: ['paths']
+     nargs: '*'
+     help: "Provide path to code base"
+   - keys: ['-o', '--object-only']
+     help: "Provide flag if you don't want to visualise your code dependencies as graph"
+     action: 'store_true'
+     default: False

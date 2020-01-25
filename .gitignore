@@ -1,0 +1,4 @@
+.idea
+dist/
+codegraph.egg-info/
+codegraph/__pycache__/
