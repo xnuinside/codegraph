@@ -20,6 +20,11 @@ pytest = "^3.0"
 [tool.poetry.scripts]
 cg = 'codegraph.main:cli'
 
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
+
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"

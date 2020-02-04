@@ -22,7 +22,12 @@ Pass '-o' flag if you want only print dependencies in console and don't want gra
 
     cg /path/to/your_python_code -o
 
+If you want to change view and play with graph output - you can check 'vizualyzer.py'
+and play with matplotlib and networkX settings.
 
+In default view - red line show dependencies between entities in different modules. Green - entities in module.
+
+![Code Graph - Code there all modules linked together](/docs/img/graph_visualisation.png?raw=true "Graph visualisation")
 
 ![Code Graph - Code with not used module](/docs/img/code_with_trash_module.png?raw=true "Code with not used module")
 ![Code Graph - Code there all modules linked together](/docs/img/normal_code.png?raw=true "Code with modules that linked together")
