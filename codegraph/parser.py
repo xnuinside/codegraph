@@ -1,4 +1,4 @@
-# 'cut of' code from pythons pyclrb
+# 'cut of' code from pythons pyclrb with some additionals
 import io
 import tokenize
 from token import NAME, DEDENT, NL
@@ -19,6 +19,7 @@ class _Object:
 
     def _addchild(self, name, obj):
         self.children[name] = obj
+        obj.main = self
 
     def __repr__(self):
         return f"{self.name} <{self.__class__.__name__}: Parent {self.parent}>"
@@ -78,7 +79,7 @@ def _nest_function(ob, func_name, lineno, async_f=False):
 
 def _nest_class(ob, class_name, lineno, super=None):
     "Return a Class after nesting within ob."
-    newclass = Class(ob.module, class_name, super, ob.file, lineno, ob)
+    newclass = Class(class_name, super, ob.file, lineno, ob)
     ob._addchild(class_name, newclass)
     return newclass
 
@@ -94,13 +95,17 @@ def create_objects_array(fname, source):
     try:
         new_lines = 0
         imports = None
+        cur_func = None
         for tokentype, token, start, _end, _line in g:
             if tokentype == DEDENT:
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
                 while stack and stack[-1][1] >= thisindent:
                     if isinstance(stack[-1][0], _Object):
-                        stack[-1][0].endno = lineno -1 - new_lines
+                        if getattr(stack[-1][0], 'main', None):
+                            stack[-1][0].endno = lineno - 1 - new_lines
+                        else:
+                            stack[-1][0].endno = lineno -1 - new_lines
                     del stack[-1]
                 else:
                     if tree:
@@ -152,14 +157,15 @@ def create_objects_array(fname, source):
                 tokentype, func_name, start = next(g)[0:3]
                 if tokentype != NAME:
                     continue  # Skip def with syntax error.
-                cur_func = None
                 if stack:
                     cur_obj = stack[-1][0]
                     cur_func = _nest_function(cur_obj, func_name, lineno)
                     cur_obj.endno = lineno - new_lines
                 else:
-                    tree.append(Function(func_name, fname, lineno))
-                stack.append((cur_func, thisindent))
+                    cur_func = Function(func_name, fname, lineno)
+                    tree.append(cur_func)
+                if cur_func:
+                    stack.append((cur_func, thisindent))
             elif token == 'class':
                 new_lines = 0
                 lineno, thisindent = start
@@ -167,9 +173,11 @@ def create_objects_array(fname, source):
                 while stack and stack[-1][1] >= thisindent:
                     del stack[-1]
                 tokentype, class_name, start = next(g)[0:3]
+
                 if tokentype != NAME:
                     continue
                 inherit = None
+
                 if stack:
                     cur_obj = stack[-1][0]
                     cur_class = _nest_class(
@@ -189,41 +197,3 @@ def create_objects_array(fname, source):
         tree.append(imports)
     return tree
 
-
-def _getnamelist(g):
-    """Return list of (dotted-name, as-name or None) tuples for token source g.
-    An as-name is the name that follows 'as' in an as clause.
-    """
-    names = []
-    while True:
-        name, token = _getname(g)
-        if not name:
-            break
-        if token == 'as':
-            name2, token = _getname(g)
-        else:
-            name2 = None
-        names.append((name, name2))
-        while token != "," and "\n" not in token:
-            token = next(g)[1]
-        if token != ",":
-            break
-    return names
-
-
-def _getname(g):
-    "Return (dotted-name or None, next-token) tuple for token source g."
-    parts = []
-    tokentype, token = next(g)[0:2]
-    if tokentype != NAME and token != '*':
-        return (None, token)
-    parts.append(token)
-    while True:
-        tokentype, token = next(g)[0:2]
-        if token != '.':
-            break
-        tokentype, token = next(g)[0:2]
-        if tokentype != NAME:
-            break
-        parts.append(token)
-    return (".".join(parts), token)
