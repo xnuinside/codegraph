@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codegraph"
-version = "0.0.4"
+version = "0.0.5"
 license = "MIT"
 readme = "README.rst"
 homepage = "https://github.com/xnuinside/codegraph"
@@ -21,9 +21,9 @@ pytest = "^3.0"
 cg = 'codegraph.main:cli'
 
 [tool.poetry-dynamic-versioning]
-enable = true
+enable = false
 vcs = "git"
-style = "pep440"
+style = "semver"
 
 [build-system]
 requires = ["poetry>=0.12"]
