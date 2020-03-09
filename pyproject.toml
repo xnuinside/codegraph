@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codegraph"
-version = "0.0.5"
+version = "0.0.6"
 license = "MIT"
 readme = "README.rst"
 homepage = "https://github.com/xnuinside/codegraph"

@@ -34,18 +34,53 @@ def get_code_objects(paths_list: List) -> Dict:
     return all_data
 
 
-def create_graph(args: Namespace) -> Dict:
-    """
-        method to create list of objects from py modules
-    :param args:
-    :return:
-    """
-    # get py modules list
-    paths_list = get_paths_list(args.paths)
-    # get py modules list
-    add_dict = get_code_objects(paths_list)
-    modules_entities = usage_graph(add_dict)
-    return modules_entities
+class CodeGraph:
+
+    def __init__(self, args: Namespace):
+        self.paths_list = get_paths_list(args.paths)
+        # get py modules list data
+        self.modules_data = get_code_objects(self.paths_list)
+
+    def get_lines_numbers(self):
+        """
+           return data with entities names and start and end line
+        :return: Example: {'/Users/user/package/module_name.py':
+                {'function': (1, 2), 'function_with_constant_return_int': (5, 6),
+                'function_with_constant_return_float': (9, 10),
+                'function_with_statement_return': (13, 14)..}}
+
+                first number in tuple - start line, second - last line
+        """
+        data = {}
+        for module in self.modules_data:
+            data[module] = {}
+            for func in self.modules_data[module]:
+                 data[module][func.name] = (func.lineno, func.endno)
+        return data
+
+    def usage_graph(self) -> Dict:
+        """
+            module name: function
+        :return:
+        """
+        entities_lines, imports, modules_names_map = get_imports_and_entities_lines(self.modules_data)
+        entities_usage_in_modules = collect_entities_usage_in_modules(self.modules_data, imports, modules_names_map)
+        # create edges
+        dependencies = defaultdict(dict)
+        for module in entities_usage_in_modules:
+            dependencies[module] = defaultdict(list)
+            for method_that_used in entities_usage_in_modules[module]:
+                method_usage_lines = entities_usage_in_modules[module][method_that_used]
+                for method_usage_line in method_usage_lines:
+                    for entity in entities_lines[module]:
+                        if entity[0] <= method_usage_line <= entity[1]:
+                            dependencies[module][entities_lines[module][entity]].append(method_that_used)
+                            break
+                    else:
+                        # mean in global of module
+                        dependencies[module]['_'].append(method_that_used)
+        dependencies = populate_free_nodes(self.modules_data, dependencies)
+        return dependencies
 
 
 def get_module_name(code_path: Text) -> Text:
@@ -145,32 +180,6 @@ def populate_free_nodes(code_objects: Dict, dependencies: Dict) -> Dict:
     return dependencies
 
 
-def usage_graph(code_objects: Dict) -> Dict:
-    """
-        module name: function
-    :param code_objects:
-    :return:
-    """
-    entities_lines, imports, modules_names_map = get_imports_and_entities_lines(code_objects)
-    entities_usage_in_modules = collect_entities_usage_in_modules(code_objects, imports, modules_names_map )
-    # create edges
-    dependencies = defaultdict(dict)
-    for module in entities_usage_in_modules:
-        dependencies[module] = defaultdict(list)
-        for method_that_used in entities_usage_in_modules[module]:
-            method_usage_lines = entities_usage_in_modules[module][method_that_used]
-            for method_usage_line in method_usage_lines:
-                for entity in entities_lines[module]:
-                    if entity[0] <= method_usage_line <= entity[1]:
-                        dependencies[module][entities_lines[module][entity]].append(method_that_used)
-                        break
-                else:
-                    # mean in global of module
-                    dependencies[module]['_'].append(method_that_used)
-    dependencies = populate_free_nodes(code_objects, dependencies)
-    return dependencies
-
-
 def search_entity_usage(module_name: Text, name: Text, line: Text) -> bool:
     """ check exist method or entity usage in line or not """
     method_call = name + "("
@@ -182,4 +191,3 @@ def search_entity_usage(module_name: Text, name: Text, line: Text) -> bool:
         if aliases[module_name] + '.' + method_call in line:
             return True
     return False
-
