@@ -19,9 +19,9 @@ def cli():
 
 
 def main(args):
-    modules_entities = core.create_graph(args)
-    pprint.pprint(modules_entities)
+    usage_graph = core.CodeGraph(args).usage_graph()
+    pprint.pprint(usage_graph)
     if not args.object_only:
         # to make more quick work if not needed to visualize
         import codegraph.vizualyzer as vz
-        vz.draw_graph(modules_entities)
+        vz.draw_graph(usage_graph)
