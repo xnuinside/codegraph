@@ -191,8 +191,3 @@ def search_entity_usage(module_name: Text, name: Text, line: Text) -> bool:
         if aliases[module_name] + '.' + method_call in line:
             return True
     return False
-
-
-class Args:
-    paths = ['/Users/jvolkova/laziest/tests/code_sample/done/primitive_code.py']
-print(CodeGraph(Args).get_lines_numbers())
