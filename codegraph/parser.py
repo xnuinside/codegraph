@@ -1,7 +1,7 @@
 # 'cut of' code from pythons pyclrb with some additionals
 import io
 import tokenize
-from token import NAME, DEDENT, NL
+from token import DEDENT, NAME, NL
 from typing import List, Text
 
 __all__ = ["Class", "Function"]
@@ -9,6 +9,7 @@ __all__ = ["Class", "Function"]
 
 class _Object:
     """Information about Python class or function."""
+
     def __init__(self, name: Text, file: Text, lineno: int, parent: object):
         self.name = name
         self.file = file
@@ -40,18 +41,21 @@ class Import(object):
 
 class Function(_Object):
     "Information about a Python function, including methods."
+
     def __init__(self, name, file, lineno, parent=None):
         _Object.__init__(self, name, file, lineno, parent)
 
 
 class AsyncFunction(_Object):
     "Information about a Python async function, including methods."
+
     def __init__(self, name, file, lineno, parent=None):
         _Object.__init__(self, name, file, lineno, parent)
 
 
 class Class(_Object):
     """Information about a Python class."""
+
     def __init__(self, name, super, file, lineno, parent=None):
         _Object.__init__(self, name, file, lineno, parent)
         self.super = [] if super is None else super
@@ -84,8 +88,9 @@ def _nest_class(ob, class_name, lineno, super=None):
     return newclass
 
 
-def create_objects_array(fname, source):
-    """ Return an object list for a particular module. """
+def create_objects_array(fname, source):  # noqa: C901
+    # todo: need to do optimization
+    """Return an object list for a particular module."""
     tree = []
     f = io.StringIO(source)
 
@@ -102,10 +107,10 @@ def create_objects_array(fname, source):
                 # Close previous nested classes and defs.
                 while stack and stack[-1][1] >= thisindent:
                     if isinstance(stack[-1][0], _Object):
-                        if getattr(stack[-1][0], 'main', None):
+                        if getattr(stack[-1][0], "main", None):
                             stack[-1][0].endno = lineno - 1 - new_lines
                         else:
-                            stack[-1][0].endno = lineno -1 - new_lines
+                            stack[-1][0].endno = lineno - 1 - new_lines
                     del stack[-1]
                 else:
                     if tree:
@@ -114,21 +119,23 @@ def create_objects_array(fname, source):
             elif tokentype == NL:
                 new_lines += 1
 
-            elif token == 'import':
-                modules = [_line.replace('\n', '').split('import ')[1]]
+            elif token == "import":
+                modules = [_line.replace("\n", "").split("import ")[1]]
                 if not imports:
                     imports = Import(modules)
                 else:
                     for module in modules:
                         imports.add(module)
-            elif token == 'from':
-                modules = [_line.replace('\n', '').split('from ')[1].replace(' import ', '.')]
+            elif token == "from":
+                modules = [
+                    _line.replace("\n", "").split("from ")[1].replace(" import ", ".")
+                ]
                 if not imports:
                     imports = Import(modules)
                 else:
                     for module in modules:
                         imports.add(module)
-            elif token == 'async':
+            elif token == "async":
                 new_lines = 0
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
@@ -148,7 +155,7 @@ def create_objects_array(fname, source):
                 else:
                     tree.append(AsyncFunction(func_name, fname, lineno))
                 stack.append((cur_func, thisindent))
-            elif token == 'def':
+            elif token == "def":
                 new_lines = 0
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
@@ -166,7 +173,7 @@ def create_objects_array(fname, source):
                     tree.append(cur_func)
                 if cur_func:
                     stack.append((cur_func, thisindent))
-            elif token == 'class':
+            elif token == "class":
                 new_lines = 0
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
@@ -180,12 +187,10 @@ def create_objects_array(fname, source):
 
                 if stack:
                     cur_obj = stack[-1][0]
-                    cur_class = _nest_class(
-                            cur_obj, class_name, lineno, inherit)
+                    cur_class = _nest_class(cur_obj, class_name, lineno, inherit)
                     cur_obj.endno = lineno - new_lines
                 else:
-                    cur_class = Class(class_name, inherit,
-                                      fname, lineno)
+                    cur_class = Class(class_name, inherit, fname, lineno)
                     tree.append(cur_class)
                 stack.append((cur_class, thisindent))
 
@@ -196,4 +201,3 @@ def create_objects_array(fname, source):
     if imports:
         tree.append(imports)
     return tree
-

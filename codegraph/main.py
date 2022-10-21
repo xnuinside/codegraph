@@ -4,8 +4,7 @@ import pprint
 
 import clifier
 
-from codegraph import __version__
-from codegraph import core
+from codegraph import __version__, core
 
 CLI_CFG_NAME = "conf/cli.yml"
 
@@ -24,4 +23,5 @@ def main(args):
     if not args.object_only:
         # to make more quick work if not needed to visualize
         import codegraph.vizualyzer as vz
+
         vz.draw_graph(usage_graph)
