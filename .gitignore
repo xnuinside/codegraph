@@ -2,3 +2,4 @@
 dist/
 codegraph.egg-info/
 codegraph/__pycache__/
+*/__pycache__/
