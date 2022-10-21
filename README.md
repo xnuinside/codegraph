@@ -42,13 +42,15 @@ Pass '-o' flag if you want only print dependencies in console and don't want gra
 If you want to change view and play with graph output - you can check 'vizualyzer.py'
 and play with matplotlib and networkX settings.
 
-In default view - red line show dependencies between entities in different modules. Green - entities in module.
+### Colors meanings 
+In default view - **red line** show dependencies between entities in different modules.
+**Green** - links between objects/functions inside same module.
 
-![Graph visualisation](/docs/img/graph_visualisation.png "Graph visualisation")
+![Graph visualisation](https://github.com/xnuinside/codegraph/blob/main/docs/img/graph_visualisation.png "Graph visualisation")
 
-![ Code with not used module](/docs/img/code_with_trash_module.png "Code with not used module")
+![ Code with not used module](https://github.com/xnuinside/codegraph/blob/main/docs/img/code_with_trash_module.png "Code with not used module")
 
-![Code there all modules linked together](/docs/img/normal_code.png "Code there all modules linked together")
+![Code there all modules linked together](https://github.com/xnuinside/codegraph/blob/main/docs/img/normal_code.png "Code there all modules linked together")
 
 ### TODO
 
@@ -56,6 +58,7 @@ In default view - red line show dependencies between entities in different modul
     2. Add tests
     3. Work on visual part of Graph (now it is not very user friendly)
     4. Add support to variables (names) as entities
+    5. Split usage & inheritance as a different cases
 
 ## Changelog
 **v0.1.0**
@@ -64,4 +67,4 @@ In default view - red line show dependencies between entities in different modul
 1. Command line tool name changed from 'cg' to 'codegraph'.
 2. Updated versions of dependencies
 3. Minimal supported python version up to 3.8
-4. Cleaned up code
+4. Added some unit & functional tests

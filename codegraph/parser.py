@@ -97,6 +97,7 @@ def create_objects_array(fname, source):  # noqa: C901
     stack = []
 
     g = tokenize.generate_tokens(f.readline)
+
     try:
         new_lines = 0
         imports = None
