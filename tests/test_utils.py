@@ -18,9 +18,7 @@ def test_get_python_paths_list():
             ["core.py", "parser.py", "utils.py", "vizualyzer.py", "main.py"],
         )
     )
-    assert (
+    assert sorted(
         get_python_paths_list(
             (pathlib.Path(__file__).parents[1] / "codegraph").as_posix()
-        )
-        == expected
-    )
+        )) == sorted(expected)
