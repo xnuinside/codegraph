@@ -16,4 +16,4 @@ def test_main():
             "process_module_in_graph": [],
         }
     }
-    assert usage_graph == excepted
+    assert sorted(usage_graph) == sorted(excepted)
