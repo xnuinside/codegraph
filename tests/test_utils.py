@@ -12,13 +12,10 @@ def test_get_python_paths_list_error():
 
 
 def test_get_python_paths_list():
-    expected = list(
-        map(
-            lambda x: (pathlib.Path(__file__).parents[1] / "codegraph" / x).as_posix(),
-            ["core.py", "parser.py", "utils.py", "vizualyzer.py", "main.py"],
-        )
-    )
-    assert sorted(
-        get_python_paths_list(
-            (pathlib.Path(__file__).parents[1] / "codegraph").as_posix()
-        )) == sorted(expected)
+    base_path = pathlib.Path(__file__).parents[1] / "codegraph"
+    expected = [
+        (base_path / x).as_posix()
+        for x in ["core.py", "parser.py", "utils.py", "vizualyzer.py", "main.py"]
+    ]
+    result = get_python_paths_list(base_path.as_posix())
+    assert sorted(result) == sorted(expected)
