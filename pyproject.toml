@@ -21,6 +21,7 @@ classifiers = [
 python = "^3.12"
 matplotlib = "^3.9"
 networkx = "^3.4"
+click = "^8.1.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.3"
