@@ -4,15 +4,15 @@ repos:
     hooks:
     - id: seed-isort-config
 -   repo: https://github.com/pycqa/isort
-    rev: 5.4.2
+    rev: 5.13.2
     hooks:
       - id: isort
 -   repo: https://github.com/ambv/black
-    rev: stable
+    rev: 24.10.0
     hooks:
     - id: black
-      language_version: python3.8
+      language_version: python3.12
 -   repo: https://github.com/PyCQA/flake8
-    rev: 3.8.3
+    rev: 7.1.1
     hooks:
     - id: flake8
