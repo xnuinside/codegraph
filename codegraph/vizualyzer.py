@@ -75,13 +75,17 @@ def draw_graph(modules_entities: Dict) -> None:
         font_family="Arial",
         font_size=10,
     )
+
+    arrow_size = 15
+
     nx.draw_networkx_edges(
         G,
         pos,
         edgelist=module_edges_all,
         edge_color="#009c2c",
         width=2,
-        arrows=False,
+        arrows=True,
+        arrowsize=arrow_size,
         style="dashed",
         node_size=50,
     )
@@ -91,9 +95,10 @@ def draw_graph(modules_entities: Dict) -> None:
         edgelist=sub_edges_all,
         edge_color="r",
         width=2,
-        arrows=False,
+        arrows=True,
+        arrowsize=arrow_size,
         style="dashed",
     )
-    for p in pos:  # raise text positions
+    for p in pos:
         pos[p][1] += 0.07
     plt.show()
