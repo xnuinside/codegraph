@@ -36,7 +36,7 @@ def get_code_objects(paths_list: List) -> Dict:
 
 class CodeGraph:
     def __init__(self, args: Namespace):
-        self.paths_list = get_python_paths_list(args["paths"])
+        self.paths_list = get_python_paths_list(args.paths)
         # get py modules list data
         self.modules_data = get_code_objects(self.paths_list)
 
