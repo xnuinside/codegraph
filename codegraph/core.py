@@ -1,7 +1,7 @@
 import os
 from argparse import Namespace
-from collections import defaultdict
-from typing import Dict, List, Text, Tuple
+from collections import defaultdict, deque
+from typing import Dict, List, Set, Text, Tuple
 
 from codegraph.parser import Import, create_objects_array
 from codegraph.utils import get_python_paths_list
@@ -85,6 +85,42 @@ class CodeGraph:
                         # mean in global of module
                         dependencies[module]["_"].append(method_that_used)
         dependencies = populate_free_nodes(self.modules_data, dependencies)
+        return dependencies
+
+    def get_dependencies(self, file_path: str, distance: int) -> Dict[str, Set[str]]:
+        """
+        Get dependencies that are 'distance' nodes away from the given file.
+
+        :param file_path: Path of the file to start from
+        :param distance: Number of edges to traverse
+        :return: Dictionary with distances as keys and sets of dependent files as values
+        """
+        dependencies = {i: set() for i in range(1, distance + 1)}
+        graph = self.usage_graph()
+
+        if file_path not in graph:
+            return dependencies
+
+        queue = deque([(file_path, 0)])
+        visited = set()
+
+        while queue:
+            current_file, current_distance = queue.popleft()
+
+            if current_distance >= distance:
+                continue
+
+            if current_file not in visited:
+                visited.add(current_file)
+
+                for entity, used_entities in graph[current_file].items():
+                    for used_entity in used_entities:
+                        if "." in used_entity:
+                            dependent_file = used_entity.split(".")[0] + ".py"
+                            if dependent_file != current_file:
+                                dependencies[current_distance + 1].add(dependent_file)
+                                queue.append((dependent_file, current_distance + 1))
+
         return dependencies
 
 
