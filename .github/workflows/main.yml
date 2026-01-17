@@ -6,46 +6,80 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  flake8_py3:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: 3.12
-    - name: Install dependencies
+        python-version: "3.12"
+    - name: Install flake8
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 pytest
-    
-    - name: Run flake8 (suo)
-      uses: julianwachholz/flake8-action@v2
-      with:
-        checkName: 'flake8_py3'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        pip install flake8
+    - name: Run flake8
+      run: |
+        flake8 codegraph/ tests/
 
   tests:
     runs-on: ubuntu-latest
-    needs: [flake8_py3]
+    needs: [lint]
     strategy:
+      fail-fast: false
       matrix:
-        python: [3.12]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python }}
+        python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install poetry
-        poetry install
-      env:
-        POETRY_VIRTUALENVS_CREATE: false
-    - name: Test with pytest
+        pip install pytest matplotlib networkx click
+    - name: Run tests
       run: |
-        pytest tests/ -vv
+        pytest tests/ -v
+
+  deploy-demo:
+    runs-on: ubuntu-latest
+    needs: [tests]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install codegraph
+      run: |
+        python -m pip install --upgrade pip
+        pip install matplotlib networkx click
+        pip install -e .
+    - name: Clone simple-ddl-parser for demo
+      run: |
+        git clone --depth 1 https://github.com/xnuinside/simple-ddl-parser.git /tmp/simple-ddl-parser
+    - name: Generate demo page
+      run: |
+        mkdir -p docs
+        codegraph /tmp/simple-ddl-parser/simple_ddl_parser --output docs/index.html
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'docs'
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

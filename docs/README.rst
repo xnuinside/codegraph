@@ -20,98 +20,110 @@ CodeGraph - static code analyzator, that create a diagram with your code structu
    :alt: workflow
 
 
-Tool that create a digram with your code structure to show dependencies between code entities (methods, modules, classes and etc).
-Main advantage of CodeGraph, that is does not execute the code itself. You not need to activate any environments or install dependencies to analyse the target code. 
-It is based only on lex and syntax parse, so it not need to install all your code dependencies.
+`Live Demo <https://xnuinside.github.io/codegraph/>`_ - Interactive visualization of `simple-ddl-parser <https://github.com/xnuinside/simple-ddl-parser>`_ codebase
 
-Install codegraph
-^^^^^^^^^^^^^^^^^
+Tool that creates a diagram with your code structure to show dependencies between code entities (methods, modules, classes and etc).
+Main advantage of CodeGraph is that it does not execute the code itself. You don't need to activate any environments or install dependencies to analyze the target code.
+It is based only on lexical and syntax parsing, so it doesn't need to install all your code dependencies.
+
+Interactive Visualization
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. image:: img/interactive_code_visualization.png
+   :target: img/interactive_code_visualization.png
+   :alt: Interactive Code Visualization
+
+
+**Zoom, Pan & Drag** - Use mouse wheel to zoom, drag background to pan, drag nodes to reposition them.
+
+Search & Highlight
+^^^^^^^^^^^^^^^^^^
+
+
+.. image:: img/node_search.png
+   :target: img/node_search.png
+   :alt: Node Search
+
+
+**Search with Autocomplete** - Press ``Ctrl+F`` (or ``Cmd+F`` on Mac) to search. Results show node type with color coding.
+
+
+.. image:: img/highlight_nodes.png
+   :target: img/highlight_nodes.png
+   :alt: Highlight Nodes
+
+
+**Highlight Connections** - Click on any node to highlight it and all connected nodes. Others will be dimmed.
+
+Node Information
+^^^^^^^^^^^^^^^^
+
+
+.. image:: img/node_information.png
+   :target: img/node_information.png
+   :alt: Node Information
+
+
+**Tooltips** - Hover over any node to see details: type, parent module, full path, and connection count.
+
+Unlinked Modules
+^^^^^^^^^^^^^^^^
+
+
+.. image:: img/listing_unlinked_nodes.png
+   :target: img/listing_unlinked_nodes.png
+   :alt: Unlinked Nodes
+
+
+**Unlinked Panel** - Shows modules with no connections. Click to navigate to them on the graph.
+
+UI Tips
+^^^^^^^
+
+
+.. image:: img/tips_in_ui.png
+   :target: img/tips_in_ui.png
+   :alt: UI Tips
+
+
+**Built-in Help** - Legend and keyboard shortcuts are always visible in the UI.
+
+----
+
+Installation
+^^^^^^^^^^^^
 
 .. code-block:: console
 
+   pip install codegraph
 
-       pip install codegraph
-
-Analyze your code
-^^^^^^^^^^^^^^^^^
-
-codegraph - name of command line tool for CodeGrapg
+Usage
+^^^^^
 
 .. code-block:: console
 
+   codegraph /path/to/your_python_code
 
-       codegraph /path/to/your_python_code
-       # path must be absolute
+This will generate an interactive HTML visualization and open it in your browser.
 
-       # or for one file
+CLI Options
+^^^^^^^^^^^
 
-       codegraph /path/to/your_python_code
+.. list-table::
+   :header-rows: 1
 
-your_python_code - module with your python code
-
-For example, if I put codegraph in my user home directory path will be:
-
-.. code-block::
-
-   codegraph /Users/myuser/codegraph/codegraph
-
-
-Pass '-o' flag if you want only print dependencies in console and don't want graph visualisation
-
-.. code-block::
-
-   codegraph /path/to/your_python_code -o
-
-
-If you want to change view and play with graph output - you can check 'vizualyzer.py'
-and play with matplotlib and networkX settings.
-
-Colors meanings
-^^^^^^^^^^^^^^^
-
-In default view - **red line** show dependencies between entities in different modules.
-**Green** - links between objects/functions inside same module.
-
-
-.. image:: /docs/img/graph_visualisation.png
-   :target: /docs/img/graph_visualisation.png
-   :alt: Graph visualisation
-
-
-
-.. image:: /docs/img/code_with_trash_module.png
-   :target: /docs/img/code_with_trash_module.png
-   :alt:  Code with not used module
-
-
-
-.. image:: /docs/img/normal_code.png
-   :target: /docs/img/normal_code.png
-   :alt: Code there all modules linked together
-
-
-TODO
-^^^^
-
-.. code-block::
-
-   1. Create normal readme
-   2. Add tests
-   3. Work on visual part of Graph (now it is not very user friendly)
-   4. Add support to variables (names) as entities
-   5. Split usage & inheritance as a different cases
+   * - Option
+     - Description
+   * - ``--output PATH``
+     - Custom output path for HTML file (default: ``./codegraph.html``\ )
+   * - ``--matplotlib``
+     - Use legacy matplotlib visualization instead of D3.js
+   * - ``-o, --object-only``
+     - Print dependencies to console only, no visualization
 
 
 Changelog
 ---------
 
-**v0.1.0**
-
-Improvements
-^^^^^^^^^^^^
-
-
-#. Command line tool name changed from 'cg' to 'codegraph'.
-#. Updated versions of dependencies
-#. Minimal supported python version up to 3.8
-#. Added some unit & functional tests
+See `CHANGELOG.md <CHANGELOG.md>`_ for full version history.
