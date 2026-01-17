@@ -155,7 +155,6 @@ def get_imports_and_entities_lines(  # noqa: C901
     module_names_set = {os.path.basename(m).replace(".py", "") for m in modules_}
 
     for path in code_objects:
-        _base_folder = os.path.basename(os.path.dirname(path))
         names_map[get_module_name(path)] = path
         # for each module in list
         if code_objects[path] and isinstance(code_objects[path][-1], Import):
