@@ -1,7 +1,0 @@
-**v0.1.0**
-### Improvements
-
-1. Command line tool name changed from 'cg' to 'codegraph'.
-2. Updated versions of dependencies
-3. Minimal supported python version up to 3.8
-4. Added some unit & functional tests

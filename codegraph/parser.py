@@ -128,9 +128,22 @@ def create_objects_array(fname, source):  # noqa: C901
                     for module in modules:
                         imports.add(module)
             elif token == "from":
-                modules = [
-                    _line.replace("\n", "").split("from ")[1].replace(" import ", ".")
-                ]
+                # Parse "from X import a, b, c" into ["X.a", "X.b", "X.c"]
+                import_line = _line.replace("\n", "").split("from ")[1]
+                if " import " in import_line:
+                    parts = import_line.split(" import ")
+                    base_module = parts[0].strip()
+                    imported_names = parts[1]
+                    # Handle comma-separated imports
+                    modules = []
+                    for name in imported_names.split(","):
+                        name = name.strip()
+                        # Handle "name as alias" syntax
+                        if " as " in name:
+                            name = name.split(" as ")[0].strip() + " as " + name.split(" as ")[1].strip()
+                        modules.append(f"{base_module}.{name}")
+                else:
+                    modules = [import_line]
                 if not imports:
                     imports = Import(modules)
                 else:

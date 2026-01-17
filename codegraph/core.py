@@ -224,7 +224,9 @@ def collect_entities_usage_in_modules(
         # split by line
         code = module_content.split("\n")
         for _module in imports[path]:
-            # search entities from other modules
+            # search entities from other modules (skip if not in analyzed codebase)
+            if _module not in modules_names_map:
+                continue
             _path = modules_names_map[_module]
             entities_usage_in_modules[path].update(
                 search_entities_from_module_in_code(_module, _path, code_objects, code)
