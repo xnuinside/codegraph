@@ -1,7 +1,7 @@
 # 'cut of' code from pythons pyclrb with some additionals
 import io
 import tokenize
-from token import DEDENT, NAME, NL
+from token import DEDENT, NAME, NEWLINE, NL
 from typing import List, Text
 
 __all__ = ["Class", "Function"]
@@ -129,21 +129,68 @@ def create_objects_array(fname, source):  # noqa: C901
                         imports.add(module)
             elif token == "from":
                 # Parse "from X import a, b, c" into ["X.a", "X.b", "X.c"]
-                import_line = _line.replace("\n", "").split("from ")[1]
-                if " import " in import_line:
-                    parts = import_line.split(" import ")
-                    base_module = parts[0].strip()
-                    imported_names = parts[1]
-                    # Handle comma-separated imports
-                    modules = []
-                    for name in imported_names.split(","):
-                        name = name.strip()
-                        # Handle "name as alias" syntax
-                        if " as " in name:
-                            name = name.split(" as ")[0].strip() + " as " + name.split(" as ")[1].strip()
-                        modules.append(f"{base_module}.{name}")
-                else:
-                    modules = [import_line]
+                # Also handles multi-line imports with parentheses
+                # Collect tokens to build base module path
+                base_parts = []
+                for tokentype2, token2, start2, _end2, _line2 in g:
+                    if token2 == "import":
+                        break
+                    if tokentype2 == NAME:
+                        base_parts.append(token2)
+                    elif token2 == ".":
+                        base_parts.append(".")
+
+                base_module = "".join(base_parts)
+
+                # Collect imported names (handle parentheses for multi-line)
+                imported_names = []
+                in_parens = False
+                current_name = []
+                alias = None
+
+                for tokentype2, token2, start2, _end2, _line2 in g:
+                    if token2 == "(":
+                        in_parens = True
+                        continue
+                    if token2 == ")":
+                        break
+                    if token2 == "," or (tokentype2 == NEWLINE and not in_parens):
+                        if current_name:
+                            name = "".join(current_name)
+                            if alias:
+                                name = f"{name} as {alias}"
+                                alias = None
+                            imported_names.append(name)
+                            current_name = []
+                        if tokentype2 == NEWLINE and not in_parens:
+                            break
+                        continue
+                    if token2 == "as":
+                        # Next NAME token is the alias
+                        for tokentype3, token3, _, _, _ in g:
+                            if tokentype3 == NAME:
+                                alias = token3
+                                break
+                            if token3 in (",", ")", "\n"):
+                                break
+                        continue
+                    if tokentype2 == NAME:
+                        current_name.append(token2)
+                    elif token2 == ".":
+                        current_name.append(".")
+                    if tokentype2 == NL:
+                        continue
+
+                # Don't forget the last name
+                if current_name:
+                    name = "".join(current_name)
+                    if alias:
+                        name = f"{name} as {alias}"
+                    imported_names.append(name)
+
+                # Build full module paths
+                modules = [f"{base_module}.{name}" for name in imported_names if name]
+
                 if not imports:
                     imports = Import(modules)
                 else:
@@ -197,7 +244,39 @@ def create_objects_array(fname, source):  # noqa: C901
 
                 if tokentype != NAME:
                     continue
-                inherit = None
+
+                # Parse base classes: class Name(Base1, Base2):
+                inherit = []
+                current_base = []
+                in_parens = False
+
+                for tokentype2, token2, start2, _end2, _line2 in g:
+                    if token2 == "(":
+                        in_parens = True
+                        continue
+                    if token2 == ")":
+                        if current_base:
+                            inherit.append("".join(current_base))
+                        break
+                    if token2 == ":":
+                        if current_base:
+                            inherit.append("".join(current_base))
+                        break
+                    if not in_parens:
+                        if token2 == ":":
+                            break
+                        continue
+                    if token2 == ",":
+                        if current_base:
+                            inherit.append("".join(current_base))
+                            current_base = []
+                        continue
+                    if tokentype2 == NAME:
+                        current_base.append(token2)
+                    elif token2 == ".":
+                        current_base.append(".")
+                    if tokentype2 == NL:
+                        continue
 
                 if stack:
                     cur_obj = stack[-1][0]

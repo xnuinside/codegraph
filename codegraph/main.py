@@ -1,5 +1,6 @@
 """ main module of testsdiffer for console (cli) usage"""
 
+import logging
 import pprint
 import sys
 from argparse import Namespace
@@ -7,6 +8,8 @@ from argparse import Namespace
 import click
 
 from codegraph import __version__, core
+
+logger = logging.getLogger(__name__)
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -63,18 +66,18 @@ def main(args):
 
     if args.file_path and args.distance:
         dependencies = code_graph.get_dependencies(args.file_path, args.distance)
-        print(f"Dependencies for {args.file_path}:")
+        click.echo(f"Dependencies for {args.file_path}:")
         for distance, files in dependencies.items():
-            print(f"  Distance {distance}: {', '.join(files)}")
-    else:
+            click.echo(f"  Distance {distance}: {', '.join(files)}")
+    elif args.object_only:
         pprint.pprint(usage_graph)
-        if not args.object_only:
-            import codegraph.vizualyzer as vz
+    else:
+        import codegraph.vizualyzer as vz
 
-            if args.matplotlib:
-                vz.draw_graph_matplotlib(usage_graph)
-            else:
-                vz.draw_graph(usage_graph, output_path=args.output)
+        if args.matplotlib:
+            vz.draw_graph_matplotlib(usage_graph)
+        else:
+            vz.draw_graph(usage_graph, output_path=args.output)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,13 @@
 import json
+import logging
 import os
 import webbrowser
 from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import networkx as nx
+
+logger = logging.getLogger(__name__)
 
 
 def process_module_in_graph(module: Dict[str, list], module_links: list, G: nx.DiGraph):
@@ -112,18 +115,37 @@ def convert_to_d3_format(modules_entities: Dict) -> Dict:
     links: List[Dict] = []
     node_ids = set()
     module_links = set()  # Track module-to-module links
+    module_full_paths: Dict[str, str] = {}  # Map module name to full path
+
+    # Find common root path for relative paths
+    all_paths = list(modules_entities.keys())
+    if all_paths:
+        common_prefix = os.path.commonpath(all_paths)
+        # Go up one level to include the root folder name
+        common_root = os.path.dirname(common_prefix)
+    else:
+        common_root = ""
 
     # First pass: build entity-to-module mapping and create ALL nodes
     entity_to_module: Dict[str, str] = {}
     for module_path, entities in modules_entities.items():
         module_name = os.path.basename(module_path)
 
+        # Compute relative path from common root
+        if common_root:
+            relative_path = os.path.relpath(module_path, common_root)
+        else:
+            relative_path = module_path
+
+        module_full_paths[module_name] = relative_path
+
         # Add module node
         if module_name not in node_ids:
             nodes.append({
                 "id": module_name,
                 "type": "module",
-                "collapsed": False
+                "collapsed": False,
+                "fullPath": relative_path
             })
             node_ids.add(module_name)
 
@@ -172,6 +194,14 @@ def convert_to_d3_format(modules_entities: Dict) -> Dict:
                     elif f"{dep_module_name}.py" in node_ids:
                         dep_module = f"{dep_module_name}.py"
 
+                # Special case: module._ means importing from a module (re-export)
+                # This creates a module-to-module link
+                if dep_entity == "_" and dep_module:
+                    link_key = (module_name, dep_module)
+                    if link_key not in module_links:
+                        module_links.add(link_key)
+                    continue  # Don't create entity-level link for module imports
+
                 # Try to resolve dependency to existing entity
                 dep_target = None
                 for m_path, m_entities in modules_entities.items():
@@ -217,7 +247,20 @@ def convert_to_d3_format(modules_entities: Dict) -> Dict:
             "type": "module-module"
         })
 
-    return {"nodes": nodes, "links": links}
+    # Find unlinked modules (no connections at all - neither incoming nor outgoing)
+    all_modules = {n["id"] for n in nodes if n["type"] == "module"}
+    # Modules that import something (outgoing)
+    modules_with_outgoing = {source for source, target in module_links}
+    # Modules that are imported (incoming)
+    modules_with_incoming = {target for source, target in module_links}
+    # Modules with any connection
+    linked_modules = modules_with_outgoing | modules_with_incoming
+    unlinked_modules = [
+        {"id": m, "fullPath": module_full_paths.get(m, m)}
+        for m in sorted(all_modules - linked_modules)
+    ]
+
+    return {"nodes": nodes, "links": links, "unlinkedModules": unlinked_modules}
 
 
 def get_d3_html_template(graph_data: Dict) -> str:
@@ -407,6 +450,59 @@ def get_d3_html_template(graph_data: Dict) -> str:
         .stats h4 {{
             margin-bottom: 8px;
             color: #70b8ff;
+        }}
+        .unlinked-modules {{
+            position: fixed;
+            top: 130px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 12px;
+            max-height: 300px;
+            max-width: 280px;
+            overflow-y: auto;
+        }}
+        .unlinked-modules h4 {{
+            margin-bottom: 8px;
+            color: #ff9800;
+        }}
+        .unlinked-modules .count {{
+            color: #888;
+            font-size: 11px;
+            margin-left: 5px;
+        }}
+        .unlinked-modules ul {{
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }}
+        .unlinked-modules li {{
+            padding: 4px 8px;
+            margin: 2px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }}
+        .unlinked-modules li:hover {{
+            background: rgba(255, 152, 0, 0.3);
+        }}
+        .unlinked-modules li .path {{
+            color: #888;
+            font-size: 10px;
+            display: block;
+            margin-top: 2px;
+        }}
+        .unlinked-modules::-webkit-scrollbar {{
+            width: 6px;
+        }}
+        .unlinked-modules::-webkit-scrollbar-thumb {{
+            background: #555;
+            border-radius: 3px;
         }}
         /* Search box styles */
         .search-container {{
@@ -628,6 +724,7 @@ def get_d3_html_template(graph_data: Dict) -> str:
         </div>
     </div>
     <div class="stats" id="stats"></div>
+    <div class="unlinked-modules" id="unlinked-modules"></div>
 
     <script>
         const graphData = {graph_json};
@@ -642,6 +739,25 @@ def get_d3_html_template(graph_data: Dict) -> str:
             <p>Entities: ${{entityCount}}</p>
             <p>Module connections: ${{moduleLinks}}</p>
         `;
+
+        // Populate unlinked modules panel
+        const unlinkedModules = graphData.unlinkedModules || [];
+        const unlinkedPanel = document.getElementById('unlinked-modules');
+        if (unlinkedModules.length > 0) {{
+            unlinkedPanel.innerHTML = `
+                <h4>Unlinked <span class="count">(${{unlinkedModules.length}})</span></h4>
+                <ul>
+                    ${{unlinkedModules.map(m => `
+                        <li data-module-id="${{m.id}}" title="${{m.fullPath}}">
+                            ${{m.id}}
+                            <span class="path">${{m.fullPath}}</span>
+                        </li>
+                    `).join('')}}
+                </ul>
+            `;
+        }} else {{
+            unlinkedPanel.style.display = 'none';
+        }}
 
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -808,6 +924,7 @@ def get_d3_html_template(graph_data: Dict) -> str:
                 .html(`
                     <strong>${{d.label || d.id}}</strong><br>
                     Type: ${{d.type}}<br>
+                    ${{d.fullPath ? 'Full Path: ' + d.fullPath + '<br>' : ''}}
                     ${{d.parent ? 'Module: ' + d.parent + '<br>' : ''}}
                     Outgoing: ${{outgoing}} | Incoming: ${{incoming}}
                     ${{collapsedNodes.has(d.id) ? '<br><em>(collapsed)</em>' : ''}}
@@ -1257,6 +1374,32 @@ def get_d3_html_template(graph_data: Dict) -> str:
                 clearHighlight();
             }}
         }});
+
+        // Orphan modules click handler - navigate to module node
+        document.querySelectorAll('#unlinked-modules li').forEach(li => {{
+            li.addEventListener('click', () => {{
+                const moduleId = li.dataset.moduleId;
+                const targetNode = graphData.nodes.find(n => n.id === moduleId);
+                if (targetNode) {{
+                    // Zoom and pan to the node
+                    const scale = 1.5;
+                    svg.transition()
+                        .duration(750)
+                        .call(zoom.transform, d3.zoomIdentity
+                            .translate(width / 2 - targetNode.x * scale, height / 2 - targetNode.y * scale)
+                            .scale(scale));
+
+                    // Highlight the node temporarily
+                    node.selectAll("rect, circle")
+                        .style("filter", n => n.id === moduleId ? "brightness(2) drop-shadow(0 0 10px #ff9800)" : "none");
+
+                    // Reset highlight after 2 seconds
+                    setTimeout(() => {{
+                        node.selectAll("rect, circle").style("filter", "none");
+                    }}, 2000);
+                }}
+            }});
+        }});
     </script>
 </body>
 </html>'''
@@ -1285,4 +1428,7 @@ def draw_graph(modules_entities: Dict, output_path: str = None) -> None:
 
     # Open in default browser
     webbrowser.open(f'file://{output_path}')
-    print(f"Interactive graph saved and opened in browser: {output_path}")
+
+    # Import click here to avoid circular imports and only when needed
+    import click
+    click.echo(f"Interactive graph saved and opened in browser: {output_path}")

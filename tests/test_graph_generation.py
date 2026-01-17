@@ -82,6 +82,53 @@ def func():
         # All three should be present
         assert len([i for i in imports.modules if "package." in i]) == 3
 
+    def test_multiline_imports_with_parentheses(self):
+        """Test multi-line imports with parentheses."""
+        source = """from package.submodule import (
+    ClassA,
+    ClassB,
+    function_c,
+)
+
+def func():
+    ClassA()
+"""
+        result = create_objects_array("test.py", source)
+        imports = result[-1]
+        assert isinstance(imports, Import)
+        assert "package.submodule.ClassA" in imports.modules
+        assert "package.submodule.ClassB" in imports.modules
+        assert "package.submodule.function_c" in imports.modules
+
+    def test_class_inheritance_parsing(self):
+        """Test that class inheritance is captured."""
+        source = """
+class Base1:
+    pass
+
+class Base2:
+    pass
+
+class Child(Base1, Base2):
+    pass
+
+class MultiLineInherit(
+    Base1,
+    Base2,
+):
+    pass
+"""
+        result = create_objects_array("test.py", source)
+        classes = [c for c in result if hasattr(c, 'super')]
+
+        child = next(c for c in classes if c.name == "Child")
+        assert "Base1" in child.super
+        assert "Base2" in child.super
+
+        multi = next(c for c in classes if c.name == "MultiLineInherit")
+        assert "Base1" in multi.super
+        assert "Base2" in multi.super
+
 
 class TestCodeGraphConnections:
     """Tests for CodeGraph connection detection."""

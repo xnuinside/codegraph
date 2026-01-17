@@ -1,3 +1,4 @@
+import logging
 import os
 from argparse import Namespace
 from collections import defaultdict, deque
@@ -5,6 +6,8 @@ from typing import Dict, List, Set, Text, Tuple
 
 from codegraph.parser import Import, create_objects_array
 from codegraph.utils import get_python_paths_list
+
+logger = logging.getLogger(__name__)
 
 aliases = {}
 
@@ -84,7 +87,7 @@ class CodeGraph:
                     else:
                         # mean in global of module
                         dependencies[module]["_"].append(method_that_used)
-        dependencies = populate_free_nodes(self.modules_data, dependencies)
+        dependencies = populate_free_nodes(self.modules_data, dependencies, imports, modules_names_map)
         return dependencies
 
     def get_dependencies(self, file_path: str, distance: int) -> Dict[str, Set[str]]:
@@ -148,6 +151,9 @@ def get_imports_and_entities_lines(  # noqa: C901
     imports = defaultdict(list)
     modules_ = code_objects.keys()
     names_map = {}
+    # Build a set of all module names for quick lookup
+    module_names_set = {os.path.basename(m).replace(".py", "") for m in modules_}
+
     for path in code_objects:
         _base_folder = os.path.basename(os.path.dirname(path))
         names_map[get_module_name(path)] = path
@@ -159,17 +165,42 @@ def get_imports_and_entities_lines(  # noqa: C901
                 alias = None
                 if " as " in pathed_import:
                     pathed_import, alias = pathed_import.split(" as ")
-                if _base_folder + "." in pathed_import:
-                    pathed_import = pathed_import.replace(".", "/").split(
-                        _base_folder + "/"
-                    )[1]
-                if "/" in pathed_import:
-                    pathed_import = pathed_import.split("/")[0]
-                for module_ in modules_:
-                    if pathed_import and pathed_import in module_:
-                        if alias:
-                            aliases[pathed_import] = alias
-                        imports[path].append(pathed_import)
+
+                parts = pathed_import.split(".")
+                matched = False
+
+                # Try each part from right to left to find a module match
+                # e.g., simple_ddl_parser.output.dialects.dialect_by_name
+                # -> try: dialect_by_name (no), dialects (yes!)
+                for i in range(len(parts) - 1, -1, -1):
+                    candidate = parts[i]
+
+                    # Check if this part matches a module name
+                    if candidate in module_names_set:
+                        for module_ in modules_:
+                            if candidate in module_:
+                                if alias:
+                                    aliases[candidate] = alias
+                                imports[path].append(candidate)
+                                matched = True
+                                break
+                        if matched:
+                            break
+
+                    # Check for __init__.py - if the candidate is a package name
+                    # e.g., from simple_ddl_parser import X -> simple_ddl_parser/__init__.py
+                    if not matched:
+                        for module_ in modules_:
+                            # Check if this is a package __init__.py
+                            if f"/{candidate}/__init__.py" in module_ or module_.endswith(f"{candidate}/__init__.py"):
+                                if alias:
+                                    aliases[candidate] = alias
+                                imports[path].append("__init__")
+                                matched = True
+                                break
+                        if matched:
+                            break
+
         for entity in code_objects[path]:
             # create a dict with lines of start and end for each entity in module
             entities_lines[path][(entity.lineno, entity.endno)] = entity.name
@@ -212,8 +243,8 @@ def collect_entities_usage_in_modules(
     entities_usage_in_modules = defaultdict(dict)
     for path in code_objects:
         entities_usage_in_modules[path] = defaultdict(list)
-        # print(f"Start to work with module: {path}")
-        # print(f"Imports in module: {imports}")
+        logger.debug(f"Processing module: {path}")
+        logger.debug(f"Imports in module: {imports[path]}")
         module_content = read_file_content(path)
         # to reduce count of iteration, we not need lines with functions and classes defenitions
         module_content = (
@@ -240,11 +271,62 @@ def collect_entities_usage_in_modules(
     return entities_usage_in_modules
 
 
-def populate_free_nodes(code_objects: Dict, dependencies: Dict) -> Dict:
+def populate_free_nodes(code_objects: Dict, dependencies: Dict, imports: Dict, modules_names_map: Dict) -> Dict:
+    from codegraph.parser import Class
+
     for path in code_objects:
+        # Create module-to-module connections based on imports
+        # This ensures we show connections even when specific entities aren't detected
+        # (e.g., when importing variables or when entity usage detection misses something)
+        if imports.get(path):
+            if "_" not in dependencies[path]:
+                dependencies[path]["_"] = []
+            for imp in imports[path]:
+                import_dep = f"{imp}._"
+                if import_dep not in dependencies[path]["_"]:
+                    dependencies[path]["_"].append(import_dep)
+
         for entity in code_objects[path]:
             if entity.name not in dependencies[path]:
                 dependencies[path][entity.name] = []
+
+            # Add inheritance connections for classes
+            if isinstance(entity, Class) and entity.super:
+                for base_class in entity.super:
+                    # Try to find the base class in imports or local module
+                    base_found = False
+
+                    # Check if it's a dotted name (e.g., module.ClassName)
+                    if "." in base_class:
+                        # Already qualified, add as-is
+                        dependencies[path][entity.name].append(base_class)
+                        base_found = True
+                    else:
+                        # Search in imports for this module
+                        for imp in imports.get(path, []):
+                            # Import could be like "dialects.HQL" or "simple_ddl_parser.dialects.HQL"
+                            if imp.endswith("." + base_class) or imp.endswith("." + base_class.split(" as ")[0]):
+                                # Found the import, extract module name
+                                parts = imp.split(".")
+                                if len(parts) >= 2:
+                                    module_name = parts[-2]  # e.g., "dialects" from "simple_ddl_parser.dialects.HQL"
+                                    dependencies[path][entity.name].append(f"{module_name}.{base_class}")
+                                    base_found = True
+                                    break
+
+                        # If not found in imports, check if it's a local class
+                        if not base_found:
+                            for local_entity in code_objects[path]:
+                                if local_entity.name == base_class:
+                                    # It's a local class, add without module prefix
+                                    dependencies[path][entity.name].append(base_class)
+                                    base_found = True
+                                    break
+
+                        # If still not found, add as-is (might be external)
+                        if not base_found:
+                            dependencies[path][entity.name].append(base_class)
+
     return dependencies
 
 

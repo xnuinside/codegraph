@@ -30,7 +30,6 @@ pytest = ">=7.0"
 flake8 = ">=5.0"
 pre-commit = ">=2.20"
 tox = ">=4.0"
-m2r2 = ">=0.3"
 twine = ">=5.0"
 
 [tool.poetry.scripts]

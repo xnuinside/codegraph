@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-01-17
+
+### Added
+
+- **Live Demo**: Interactive demo available at [xnuinside.github.io/codegraph](https://xnuinside.github.io/codegraph/)
+- **GitHub Pages CI/CD**: Automatic demo deployment on merge to main
+
+### Changed
+
+- **Import-based module connections**: Module-to-module links now created based on imports, not just entity usage. This ensures connections are shown even when importing variables or constants (not just functions/classes)
+- **Renamed "Unused Modules" to "Unlinked"**: Panel now shows only modules with no connections at all (neither incoming nor outgoing), instead of just modules not imported by others
+
+### Fixed
+
+- Fixed missing module connections when imported names are variables (like `dialect_by_name`) rather than functions/classes
+
 ## [1.0.0] - 2025-01-17
 
 ### Added
@@ -57,7 +73,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - KeyError when analyzing codebases with external imports not in the analyzed path
 - Now gracefully skips modules not found in the analyzed codebase
 - Comma-separated imports now properly parsed (e.g., `from package import a, b, c`)
-- Fixed missing connections when imports use comma-separated syntax
+- Multi-line imports with parentheses now properly parsed
+- Fixed missing connections when imports use comma-separated or multi-line syntax
+
+### Added
+- **Class inheritance detection**: Classes now show connections to their base classes
+- Supports single and multiple inheritance: `class Child(Base1, Base2)`
+- Supports multi-line inheritance declarations
+- **`__init__.py` support**: Now includes `__init__.py` files in analysis
+- Re-export connections from `__init__.py` are shown as dependencies
+- **Unused Modules Panel**: Shows list of modules not imported by any other module
+- Click on module name to navigate and zoom to it on the graph
+- **Full Path in Tooltip**: Hovering over modules now shows relative path (e.g., "Full Path: tests/test_comments.py")
+
+### Changed
+- Replaced print statements with logging/click.echo for proper CLI output
 
 ### Testing
 - Added comprehensive test suite for graph generation (`tests/test_graph_generation.py`)
