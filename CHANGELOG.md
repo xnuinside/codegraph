@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Show/hide links by type: Module→Module, Module→Entity, Dependencies
 - All filters available in the expanded Display panel
 
+**CSV Export**
+- New `--csv PATH` option to export graph data to CSV file
+- Columns: name, type (module/function/class/external), parent_module, full_path, links_out, links_in, lines
+- Example: `codegraph /path/to/code --csv output.csv`
+
 ### Changed
 
 - Legend panel moved to the right of Controls panel (both at top-left area)

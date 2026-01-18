@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 import os
@@ -340,3 +341,88 @@ def draw_graph(modules_entities: Dict, entity_metadata: Dict = None, output_path
     # Import click here to avoid circular imports and only when needed
     import click
     click.echo(f"Interactive graph saved and opened in browser: {output_path}")
+
+
+def export_to_csv(modules_entities: Dict, entity_metadata: Dict = None, output_path: str = None) -> None:
+    """Export graph data to CSV file.
+
+    Args:
+        modules_entities: Graph data with modules and their entities.
+        entity_metadata: Metadata for entities (lines of code, type).
+        output_path: Path to save CSV file. Default: ./codegraph.csv
+    """
+    import click
+
+    # Get D3 format data to reuse link calculation logic
+    graph_data = convert_to_d3_format(modules_entities, entity_metadata)
+    nodes = graph_data["nodes"]
+    links = graph_data["links"]
+
+    # Build links_in and links_out counts
+    links_out: Dict[str, int] = {}
+    links_in: Dict[str, int] = {}
+
+    for link in links:
+        source = link["source"]
+        target = link["target"]
+        link_type = link.get("type", "")
+
+        # Skip module-entity links (structural, not dependency)
+        if link_type == "module-entity":
+            continue
+
+        links_out[source] = links_out.get(source, 0) + 1
+        links_in[target] = links_in.get(target, 0) + 1
+
+    # Determine output path
+    if output_path is None:
+        output_path = os.path.join(os.getcwd(), "codegraph.csv")
+
+    output_path = os.path.abspath(output_path)
+
+    # Write CSV
+    with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
+        fieldnames = ['name', 'type', 'parent_module', 'full_path', 'links_out', 'links_in', 'lines']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for node in nodes:
+            node_id = node["id"]
+            node_type = node.get("type", "")
+
+            # Determine display type
+            if node_type == "module":
+                display_type = "module"
+                parent_module = ""
+                full_path = node.get("fullPath", "")
+                lines = node.get("lines", 0)
+                name = node_id
+            elif node_type == "entity":
+                display_type = node.get("entityType", "function")
+                parent_module = node.get("parent", "")
+                # Find full path from parent module
+                full_path = ""
+                for n in nodes:
+                    if n["id"] == parent_module and n["type"] == "module":
+                        full_path = n.get("fullPath", "")
+                        break
+                lines = node.get("lines", 0)
+                name = node.get("label", node_id)
+            else:  # external
+                display_type = "external"
+                parent_module = ""
+                full_path = ""
+                lines = 0
+                name = node.get("label", node_id)
+
+            writer.writerow({
+                'name': name,
+                'type': display_type,
+                'parent_module': parent_module,
+                'full_path': full_path,
+                'links_out': links_out.get(node_id, 0),
+                'links_in': links_in.get(node_id, 0),
+                'lines': lines
+            })
+
+    click.echo(f"Graph data exported to CSV: {output_path}")
