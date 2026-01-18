@@ -63,6 +63,7 @@ def cli(paths, object_only, file_path, distance, matplotlib, output):
 def main(args):
     code_graph = core.CodeGraph(args)
     usage_graph = code_graph.usage_graph()
+    entity_metadata = code_graph.get_entity_metadata()
 
     if args.file_path and args.distance:
         dependencies = code_graph.get_dependencies(args.file_path, args.distance)
@@ -77,7 +78,7 @@ def main(args):
         if args.matplotlib:
             vz.draw_graph_matplotlib(usage_graph)
         else:
-            vz.draw_graph(usage_graph, output_path=args.output)
+            vz.draw_graph(usage_graph, entity_metadata=entity_metadata, output_path=args.output)
 
 
 if __name__ == "__main__":

@@ -4,13 +4,10 @@ import os
 import webbrowser
 from typing import Dict, List
 
-import matplotlib.pyplot as plt
-import networkx as nx
-
 logger = logging.getLogger(__name__)
 
 
-def process_module_in_graph(module: Dict[str, list], module_links: list, G: nx.DiGraph):
+def process_module_in_graph(module: Dict[str, list], module_links: list, G):
     _module = os.path.basename(module)
 
     module_edges = []
@@ -30,6 +27,14 @@ def process_module_in_graph(module: Dict[str, list], module_links: list, G: nx.D
 
 
 def draw_graph_matplotlib(modules_entities: Dict) -> None:
+    try:
+        import matplotlib.pyplot as plt
+        import networkx as nx
+    except ImportError:
+        raise ImportError(
+            "matplotlib is required for matplotlib visualization. "
+            "Install it with: pip install codegraph[matplotlib]"
+        )
 
     G = nx.DiGraph()
 
@@ -109,13 +114,16 @@ def draw_graph_matplotlib(modules_entities: Dict) -> None:
     plt.show()
 
 
-def convert_to_d3_format(modules_entities: Dict) -> Dict:
+def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -> Dict:
     """Convert the modules_entities graph data to D3.js format."""
     nodes: List[Dict] = []
     links: List[Dict] = []
     node_ids = set()
     module_links = set()  # Track module-to-module links
     module_full_paths: Dict[str, str] = {}  # Map module name to full path
+
+    if entity_metadata is None:
+        entity_metadata = {}
 
     # Find common root path for relative paths
     all_paths = list(modules_entities.keys())
@@ -130,6 +138,7 @@ def convert_to_d3_format(modules_entities: Dict) -> Dict:
     entity_to_module: Dict[str, str] = {}
     for module_path, entities in modules_entities.items():
         module_name = os.path.basename(module_path)
+        module_metadata = entity_metadata.get(module_path, {})
 
         # Compute relative path from common root
         if common_root:
@@ -139,13 +148,17 @@ def convert_to_d3_format(modules_entities: Dict) -> Dict:
 
         module_full_paths[module_name] = relative_path
 
+        # Calculate total lines in module
+        total_lines = sum(m.get("lines", 0) for m in module_metadata.values())
+
         # Add module node
         if module_name not in node_ids:
             nodes.append({
                 "id": module_name,
                 "type": "module",
                 "collapsed": False,
-                "fullPath": relative_path
+                "fullPath": relative_path,
+                "lines": total_lines
             })
             node_ids.add(module_name)
 
@@ -155,12 +168,19 @@ def convert_to_d3_format(modules_entities: Dict) -> Dict:
             entity_to_module[entity_name] = module_name
             entity_to_module[f"{module_name.replace('.py', '')}.{entity_name}"] = module_name
 
+            # Get entity metadata
+            ent_meta = module_metadata.get(entity_name, {})
+            lines = ent_meta.get("lines", 0)
+            entity_type = ent_meta.get("entity_type", "function")
+
             if entity_id not in node_ids:
                 nodes.append({
                     "id": entity_id,
                     "label": entity_name,
                     "type": "entity",
-                    "parent": module_name
+                    "parent": module_name,
+                    "lines": lines,
+                    "entityType": entity_type
                 })
                 node_ids.add(entity_id)
 
@@ -374,18 +394,10 @@ def get_d3_html_template(graph_data: Dict) -> str:
             max-width: 300px;
         }}
         .controls {{
-            position: fixed;
             top: 10px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 12px;
-            z-index: 1000;
         }}
-        .controls h3 {{
-            margin-bottom: 10px;
+        .controls .panel-header h4 {{
             color: #70b8ff;
         }}
         .controls p {{
@@ -399,18 +411,16 @@ def get_d3_html_template(graph_data: Dict) -> str:
             font-family: monospace;
         }}
         .legend {{
-            position: fixed;
-            bottom: 10px;
+            top: 270px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 12px;
         }}
-        .legend h4 {{
+        .legend .panel-header h4 {{
+            color: #70b8ff;
+        }}
+        .legend .panel-content h4 {{
             margin-bottom: 8px;
             color: #70b8ff;
+            margin-top: 0;
         }}
         .legend-section {{
             margin-bottom: 10px;
@@ -438,34 +448,19 @@ def get_d3_html_template(graph_data: Dict) -> str:
         .legend-link-entity {{ background: #009c2c; }}
         .legend-link-dep {{ background: #d94a4a; }}
         .stats {{
-            position: fixed;
             top: 10px;
             right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 12px;
         }}
-        .stats h4 {{
-            margin-bottom: 8px;
+        .stats .panel-header h4 {{
             color: #70b8ff;
         }}
         .unlinked-modules {{
-            position: fixed;
             top: 130px;
             right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 12px;
             max-height: 300px;
             max-width: 280px;
-            overflow-y: auto;
         }}
-        .unlinked-modules h4 {{
-            margin-bottom: 8px;
+        .unlinked-modules .panel-header h4 {{
             color: #ff9800;
         }}
         .unlinked-modules .count {{
@@ -503,6 +498,148 @@ def get_d3_html_template(graph_data: Dict) -> str:
         .unlinked-modules::-webkit-scrollbar-thumb {{
             background: #555;
             border-radius: 3px;
+        }}
+        /* Draggable panel styles */
+        .panel {{
+            position: fixed;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 12px;
+            z-index: 100;
+            min-width: 150px;
+        }}
+        .panel-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            cursor: move;
+            border-bottom: 1px solid #333;
+            user-select: none;
+        }}
+        .panel-header h4 {{
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        .panel-toggle {{
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 4px;
+            transition: color 0.2s;
+        }}
+        .panel-toggle:hover {{
+            color: #fff;
+        }}
+        .panel-content {{
+            padding: 15px;
+            overflow-y: auto;
+        }}
+        .panel.collapsed .panel-content {{
+            display: none;
+        }}
+        .panel.collapsed {{
+            min-width: auto;
+        }}
+        /* Massive objects panel */
+        .massive-objects {{
+            bottom: 10px;
+            right: 10px;
+            max-height: 400px;
+            max-width: 300px;
+        }}
+        .massive-objects .panel-header h4 {{
+            color: #e91e63;
+        }}
+        .massive-objects .filters {{
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }}
+        .massive-objects .filter-row {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        .massive-objects label {{
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }}
+        .massive-objects input[type="checkbox"] {{
+            cursor: pointer;
+        }}
+        .massive-objects input[type="number"] {{
+            width: 60px;
+            padding: 4px 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            font-size: 12px;
+        }}
+        .massive-objects .count {{
+            color: #888;
+            font-size: 11px;
+            margin-left: 5px;
+        }}
+        .massive-objects ul {{
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }}
+        .massive-objects li {{
+            padding: 4px 8px;
+            margin: 2px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }}
+        .massive-objects li:hover {{
+            background: rgba(233, 30, 99, 0.3);
+        }}
+        .massive-objects li .lines {{
+            color: #e91e63;
+            font-weight: bold;
+        }}
+        .massive-objects li .entity-type {{
+            color: #888;
+            font-size: 10px;
+        }}
+        .massive-objects::-webkit-scrollbar {{
+            width: 6px;
+        }}
+        .massive-objects::-webkit-scrollbar-thumb {{
+            background: #555;
+            border-radius: 3px;
+        }}
+        /* Size toggle / Display panel */
+        .size-toggle {{
+            bottom: 10px;
+            left: 10px;
+        }}
+        .size-toggle .panel-header h4 {{
+            color: #9c27b0;
+        }}
+        .size-toggle label {{
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .size-toggle input[type="checkbox"] {{
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
         }}
         /* Search box styles */
         .search-container {{
@@ -681,60 +818,159 @@ def get_d3_html_template(graph_data: Dict) -> str:
         <button id="clearHighlight">Clear (Esc)</button>
     </div>
 
-    <div class="controls">
-        <h3>Controls</h3>
-        <p><kbd>Ctrl+F</kbd> Search nodes</p>
-        <p><kbd>Scroll</kbd> Zoom in/out</p>
-        <p><kbd>Drag</kbd> on background - Pan</p>
-        <p><kbd>Drag</kbd> on node - Move node</p>
-        <p><kbd>Click</kbd> module/entity - Collapse/Expand</p>
-        <p><kbd>Double-click</kbd> - Focus on node</p>
-        <p><kbd>Esc</kbd> Clear search highlight</p>
-    </div>
-    <div class="legend">
-        <div class="legend-section">
-            <h4>Nodes</h4>
-            <div class="legend-item">
-                <div class="legend-color legend-module"></div>
-                <span>Module (.py file)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color legend-entity"></div>
-                <span>Entity (function/class)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color legend-external"></div>
-                <span>External dependency</span>
-            </div>
+    <div class="panel controls" id="controls-panel">
+        <div class="panel-header">
+            <h4>Controls</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
         </div>
-        <div class="legend-section">
-            <h4>Links</h4>
-            <div class="legend-item">
-                <div class="legend-line legend-link-module"></div>
-                <span>Module → Module</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-line legend-link-entity" style="border-top: 2px dashed #009c2c; background: none; height: 0;"></div>
-                <span>Module → Entity</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-line legend-link-dep"></div>
-                <span>Entity → Dependency</span>
-            </div>
+        <div class="panel-content">
+            <p><kbd>Ctrl+F</kbd> Search nodes</p>
+            <p><kbd>Scroll</kbd> Zoom in/out</p>
+            <p><kbd>Drag</kbd> on background - Pan</p>
+            <p><kbd>Drag</kbd> on node - Pin node position</p>
+            <p><kbd>Click</kbd> module/entity - Collapse/Expand</p>
+            <p><kbd>Double-click</kbd> - Unpin / Focus on node</p>
+            <p><kbd>Esc</kbd> Clear search highlight</p>
         </div>
     </div>
-    <div class="stats" id="stats"></div>
-    <div class="unlinked-modules" id="unlinked-modules"></div>
+    <div class="panel legend" id="legend-panel">
+        <div class="panel-header">
+            <h4>Legend</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <div class="legend-section">
+                <h4>Nodes</h4>
+                <div class="legend-item">
+                    <div class="legend-color legend-module"></div>
+                    <span>Module (.py file)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-entity"></div>
+                    <span>Entity (function/class)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-external"></div>
+                    <span>External dependency</span>
+                </div>
+            </div>
+            <div class="legend-section">
+                <h4>Links</h4>
+                <div class="legend-item">
+                    <div class="legend-line legend-link-module"></div>
+                    <span>Module → Module</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line legend-link-entity" style="border-top: 2px dashed #009c2c; background: none; height: 0;"></div>
+                    <span>Module → Entity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line legend-link-dep"></div>
+                    <span>Entity → Dependency</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="panel stats" id="stats">
+        <div class="panel-header">
+            <h4>Statistics</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content" id="stats-content"></div>
+    </div>
+    <div class="panel unlinked-modules" id="unlinked-modules">
+        <div class="panel-header">
+            <h4>Unlinked <span class="count" id="unlinked-count"></span></h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content" id="unlinked-content"></div>
+    </div>
+    <div class="panel massive-objects" id="massive-objects">
+        <div class="panel-header">
+            <h4>Massive Objects <span class="count" id="massive-count"></span></h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <div class="filters">
+                <div class="filter-row">
+                    <label><input type="checkbox" id="filter-modules" checked> Modules</label>
+                    <label><input type="checkbox" id="filter-classes" checked> Classes</label>
+                    <label><input type="checkbox" id="filter-functions" checked> Functions</label>
+                </div>
+                <div class="filter-row">
+                    <span>Min lines:</span>
+                    <input type="number" id="massive-threshold" value="50" min="1">
+                </div>
+            </div>
+            <ul id="massive-list"></ul>
+        </div>
+    </div>
+    <div class="panel size-toggle" id="size-toggle-panel">
+        <div class="panel-header">
+            <h4>Display</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <label>
+                <input type="checkbox" id="size-by-code" checked>
+                Size by lines of code
+            </label>
+        </div>
+    </div>
 
     <script>
         const graphData = {graph_json};
+
+        // Panel drag and collapse functionality
+        document.querySelectorAll('.panel').forEach(panel => {{
+            const header = panel.querySelector('.panel-header');
+            const toggleBtn = panel.querySelector('.panel-toggle');
+            let isDragging = false;
+            let startX, startY, startLeft, startTop;
+
+            // Collapse/expand
+            toggleBtn.addEventListener('click', (e) => {{
+                e.stopPropagation();
+                panel.classList.toggle('collapsed');
+                toggleBtn.textContent = panel.classList.contains('collapsed') ? '+' : '−';
+                toggleBtn.title = panel.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+            }});
+
+            // Drag functionality
+            header.addEventListener('mousedown', (e) => {{
+                if (e.target === toggleBtn) return;
+                isDragging = true;
+                const rect = panel.getBoundingClientRect();
+                startX = e.clientX;
+                startY = e.clientY;
+                startLeft = rect.left;
+                startTop = rect.top;
+                panel.style.right = 'auto';
+                panel.style.bottom = 'auto';
+                panel.style.left = startLeft + 'px';
+                panel.style.top = startTop + 'px';
+                document.body.style.cursor = 'move';
+            }});
+
+            document.addEventListener('mousemove', (e) => {{
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                panel.style.left = (startLeft + dx) + 'px';
+                panel.style.top = (startTop + dy) + 'px';
+            }});
+
+            document.addEventListener('mouseup', () => {{
+                isDragging = false;
+                document.body.style.cursor = '';
+            }});
+        }});
 
         // Calculate stats
         const moduleCount = graphData.nodes.filter(n => n.type === 'module').length;
         const entityCount = graphData.nodes.filter(n => n.type === 'entity').length;
         const moduleLinks = graphData.links.filter(l => l.type === 'module-module').length;
-        document.getElementById('stats').innerHTML = `
-            <h4>Statistics</h4>
+        document.getElementById('stats-content').innerHTML = `
             <p>Modules: ${{moduleCount}}</p>
             <p>Entities: ${{entityCount}}</p>
             <p>Module connections: ${{moduleLinks}}</p>
@@ -744,8 +980,8 @@ def get_d3_html_template(graph_data: Dict) -> str:
         const unlinkedModules = graphData.unlinkedModules || [];
         const unlinkedPanel = document.getElementById('unlinked-modules');
         if (unlinkedModules.length > 0) {{
-            unlinkedPanel.innerHTML = `
-                <h4>Unlinked <span class="count">(${{unlinkedModules.length}})</span></h4>
+            document.getElementById('unlinked-count').textContent = `(${{unlinkedModules.length}})`;
+            document.getElementById('unlinked-content').innerHTML = `
                 <ul>
                     ${{unlinkedModules.map(m => `
                         <li data-module-id="${{m.id}}" title="${{m.fullPath}}">
@@ -758,6 +994,63 @@ def get_d3_html_template(graph_data: Dict) -> str:
         }} else {{
             unlinkedPanel.style.display = 'none';
         }}
+
+        // Size scaling state
+        let sizeByCode = true;
+
+        // Calculate max lines for scaling
+        const maxLines = Math.max(...graphData.nodes.map(n => n.lines || 0), 1);
+
+        // Function to get node size based on lines of code
+        function getNodeSize(d, baseSize) {{
+            if (!sizeByCode || !d.lines) return baseSize;
+            // Scale between baseSize and baseSize * 3 based on lines
+            const scale = 1 + (d.lines / maxLines) * 2;
+            return baseSize * scale;
+        }}
+
+        // Function to update massive objects list
+        function updateMassiveObjects() {{
+            const threshold = parseInt(document.getElementById('massive-threshold').value) || 50;
+            const showModules = document.getElementById('filter-modules').checked;
+            const showClasses = document.getElementById('filter-classes').checked;
+            const showFunctions = document.getElementById('filter-functions').checked;
+
+            const massiveNodes = graphData.nodes
+                .filter(n => (n.type === 'entity' || n.type === 'module') && n.lines >= threshold)
+                .filter(n => {{
+                    if (n.type === 'module') return showModules;
+                    if (n.entityType === 'class') return showClasses;
+                    if (n.entityType === 'function') return showFunctions;
+                    return true;
+                }})
+                .sort((a, b) => b.lines - a.lines);
+
+            document.getElementById('massive-count').textContent = `(${{massiveNodes.length}})`;
+            document.getElementById('massive-list').innerHTML = massiveNodes.map(n => `
+                <li data-node-id="${{n.id}}" title="${{n.type === 'module' ? n.fullPath : n.parent}}">
+                    <span class="lines">${{n.lines}}</span> ${{n.label || n.id}}
+                    <span class="entity-type">${{n.type === 'module' ? 'module' : n.entityType}}</span>
+                </li>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('#massive-list li').forEach(li => {{
+                li.addEventListener('click', () => {{
+                    const nodeId = li.dataset.nodeId;
+                    highlightNode(nodeId);
+                }});
+            }});
+        }}
+
+        // Add event listeners for massive objects filters
+        document.getElementById('filter-modules').addEventListener('change', updateMassiveObjects);
+        document.getElementById('filter-classes').addEventListener('change', updateMassiveObjects);
+        document.getElementById('filter-functions').addEventListener('change', updateMassiveObjects);
+        document.getElementById('massive-threshold').addEventListener('input', updateMassiveObjects);
+
+        // Initial population
+        updateMassiveObjects();
 
         const width = window.innerWidth;
         const height = window.innerHeight;
@@ -827,22 +1120,25 @@ def get_d3_html_template(graph_data: Dict) -> str:
             .attr("fill", "#d94a4a")
             .attr("d", "M0,-5L10,0L0,5");
 
-        // Create force simulation with adjusted parameters
+        // Scale spacing based on number of nodes
+        const nodeCount = graphData.nodes.length;
+        const scaleFactor = nodeCount > 40 ? 1 + (nodeCount - 40) / 50 : 1;
+
+        // Create force simulation with adjusted parameters for better spacing
         const simulation = d3.forceSimulation(graphData.nodes)
             .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => {{
-                if (d.type === 'module-module') return 200;
-                if (d.type === 'module-entity') return 60;
-                return 80;
-            }}))
+                const base = d.type === 'module-module' ? 300 : d.type === 'module-entity' ? 100 : 120;
+                return base * scaleFactor;
+            }}).strength(0.3 / scaleFactor))
             .force("charge", d3.forceManyBody().strength(d => {{
-                if (d.type === 'module') return -500;
-                return -150;
+                const base = d.type === 'module' ? -800 : -300;
+                return base * scaleFactor;
             }}))
-            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05 / scaleFactor))
             .force("collision", d3.forceCollide().radius(d => {{
-                if (d.type === 'module') return 50;
-                return 25;
-            }}));
+                const base = d.type === 'module' ? 80 : 40;
+                return base * scaleFactor;
+            }}).strength(1));
 
         // Create links (module-module first so they appear behind)
         const link = g.append("g")
@@ -866,21 +1162,23 @@ def get_d3_html_template(graph_data: Dict) -> str:
                 .on("drag", dragged)
                 .on("end", dragended));
 
-        // Add shapes based on node type
+        // Add shapes based on node type with size based on lines of code
         node.each(function(d) {{
             const el = d3.select(this);
             if (d.type === "module") {{
+                const size = getNodeSize(d, 30);
                 el.append("rect")
                     .attr("class", "node-module")
-                    .attr("width", 30)
-                    .attr("height", 30)
-                    .attr("x", -15)
-                    .attr("y", -15)
+                    .attr("width", size)
+                    .attr("height", size)
+                    .attr("x", -size / 2)
+                    .attr("y", -size / 2)
                     .attr("rx", 4);
             }} else if (d.type === "entity") {{
+                const r = getNodeSize(d, 10);
                 el.append("circle")
                     .attr("class", "node-entity")
-                    .attr("r", 10);
+                    .attr("r", r);
             }} else {{
                 el.append("circle")
                     .attr("class", "node-external")
@@ -888,13 +1186,49 @@ def get_d3_html_template(graph_data: Dict) -> str:
             }}
         }});
 
-        // Add labels
+        // Function to update node sizes
+        function updateNodeSizes() {{
+            node.each(function(d) {{
+                const el = d3.select(this);
+                if (d.type === "module") {{
+                    const size = getNodeSize(d, 30);
+                    el.select("rect")
+                        .attr("width", size)
+                        .attr("height", size)
+                        .attr("x", -size / 2)
+                        .attr("y", -size / 2);
+                }} else if (d.type === "entity") {{
+                    const r = getNodeSize(d, 10);
+                    el.select("circle").attr("r", r);
+                }}
+            }});
+            // Update labels position
+            labels.attr("dy", d => {{
+                if (d.type === "module") {{
+                    return getNodeSize(d, 30) / 2 + 15;
+                }}
+                return getNodeSize(d, 10) + 10;
+            }});
+        }}
+
+        // Size toggle event listener
+        document.getElementById('size-by-code').addEventListener('change', function() {{
+            sizeByCode = this.checked;
+            updateNodeSizes();
+        }});
+
+        // Add labels with dynamic positioning based on node size
         const labels = g.append("g")
             .selectAll("text")
             .data(graphData.nodes)
             .join("text")
             .attr("class", d => `label ${{d.type === 'module' ? 'label-module' : ''}}`)
-            .attr("dy", d => d.type === "module" ? 30 : 20)
+            .attr("dy", d => {{
+                if (d.type === "module") {{
+                    return getNodeSize(d, 30) / 2 + 15;
+                }}
+                return getNodeSize(d, 10) + 10;
+            }})
             .attr("text-anchor", "middle")
             .text(d => d.label || d.id);
 
@@ -923,7 +1257,8 @@ def get_d3_html_template(graph_data: Dict) -> str:
                 .style("top", (event.pageY - 15) + "px")
                 .html(`
                     <strong>${{d.label || d.id}}</strong><br>
-                    Type: ${{d.type}}<br>
+                    Type: ${{d.entityType || d.type}}<br>
+                    ${{d.lines ? 'Lines of code: ' + d.lines + '<br>' : ''}}
                     ${{d.fullPath ? 'Full Path: ' + d.fullPath + '<br>' : ''}}
                     ${{d.parent ? 'Module: ' + d.parent + '<br>' : ''}}
                     Outgoing: ${{outgoing}} | Incoming: ${{incoming}}
@@ -940,15 +1275,22 @@ def get_d3_html_template(graph_data: Dict) -> str:
             }}
         }})
         .on("dblclick", function(event, d) {{
-            // Focus on this node (zoom to it)
             event.stopPropagation();
-            const scale = 1.5;
-            svg.transition()
-                .duration(500)
-                .call(zoom.transform, d3.zoomIdentity
-                    .translate(width / 2, height / 2)
-                    .scale(scale)
-                    .translate(-d.x, -d.y));
+            // If node is pinned (was dragged), release it
+            if (d.fx !== null || d.fy !== null) {{
+                d.fx = null;
+                d.fy = null;
+                simulation.alpha(0.3).restart();
+            }} else {{
+                // Focus on this node (zoom to it)
+                const scale = 1.5;
+                svg.transition()
+                    .duration(500)
+                    .call(zoom.transform, d3.zoomIdentity
+                        .translate(width / 2, height / 2)
+                        .scale(scale)
+                        .translate(-d.x, -d.y));
+            }}
         }});
 
         function toggleCollapse(targetNode) {{
@@ -1071,7 +1413,7 @@ def get_d3_html_template(graph_data: Dict) -> str:
                 .attr("y", d => d.y);
         }});
 
-        // Drag functions
+        // Drag functions - nodes stay where you drag them
         function dragstarted(event, d) {{
             if (!event.active) simulation.alphaTarget(0.3).restart();
             d.fx = d.x;
@@ -1085,13 +1427,13 @@ def get_d3_html_template(graph_data: Dict) -> str:
 
         function dragended(event, d) {{
             if (!event.active) simulation.alphaTarget(0);
-            d.fx = null;
-            d.fy = null;
+            // Keep node at dragged position (don't reset fx/fy to null)
+            // Double-click to release node back to simulation
         }}
 
         // Initial zoom to fit content
         simulation.on("end", () => {{
-            // Calculate bounds
+            // Calculate bounds for ALL nodes
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             graphData.nodes.forEach(n => {{
                 minX = Math.min(minX, n.x);
@@ -1100,12 +1442,25 @@ def get_d3_html_template(graph_data: Dict) -> str:
                 maxY = Math.max(maxY, n.y);
             }});
 
-            const padding = 50;
-            const graphWidth = maxX - minX + padding * 2;
-            const graphHeight = maxY - minY + padding * 2;
-            const scale = Math.min(width / graphWidth, height / graphHeight, 1) * 0.9;
             const centerX = (minX + maxX) / 2;
             const centerY = (minY + maxY) / 2;
+
+            const padding = 100;
+            const graphWidth = maxX - minX + padding * 2;
+            const graphHeight = maxY - minY + padding * 2;
+
+            // Calculate scale to fit all nodes
+            const fitScale = Math.min(width / graphWidth, height / graphHeight);
+
+            // For larger graphs (>20 nodes), zoom out more aggressively
+            const nodeCount = graphData.nodes.length;
+            let maxZoom = 0.7;
+            if (nodeCount > 20) {{
+                // Reduce max zoom based on node count: 0.7 -> down to 0.4 for 120+ nodes
+                maxZoom = Math.max(0.4, 0.7 - (nodeCount - 20) * 0.003);
+            }}
+
+            const scale = Math.min(fitScale * 0.85, maxZoom);
 
             svg.transition()
                 .duration(500)
@@ -1376,7 +1731,7 @@ def get_d3_html_template(graph_data: Dict) -> str:
         }});
 
         // Orphan modules click handler - navigate to module node
-        document.querySelectorAll('#unlinked-modules li').forEach(li => {{
+        document.querySelectorAll('#unlinked-content li').forEach(li => {{
             li.addEventListener('click', () => {{
                 const moduleId = li.dataset.moduleId;
                 const targetNode = graphData.nodes.find(n => n.id === moduleId);
@@ -1405,14 +1760,15 @@ def get_d3_html_template(graph_data: Dict) -> str:
 </html>'''
 
 
-def draw_graph(modules_entities: Dict, output_path: str = None) -> None:
+def draw_graph(modules_entities: Dict, entity_metadata: Dict = None, output_path: str = None) -> None:
     """Generate interactive D3.js visualization and open in browser.
 
     Args:
         modules_entities: Graph data with modules and their entities.
+        entity_metadata: Metadata for entities (lines of code, type).
         output_path: Path to save HTML file. Default: ./codegraph.html
     """
-    graph_data = convert_to_d3_format(modules_entities)
+    graph_data = convert_to_d3_format(modules_entities, entity_metadata)
     html_content = get_d3_html_template(graph_data)
 
     # Determine output path
