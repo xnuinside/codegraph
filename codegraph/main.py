@@ -35,7 +35,12 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     type=click.Path(),
     help="Output path for D3.js HTML file (default: ./codegraph.html)",
 )
-def cli(paths, object_only, file_path, distance, matplotlib, output):
+@click.option(
+    "--csv",
+    type=click.Path(),
+    help="Export graph data to CSV file (specify output path)",
+)
+def cli(paths, object_only, file_path, distance, matplotlib, output, csv):
     """
     Tool that creates a graph of code to show dependencies between code entities (methods, classes, etc.).
     CodeGraph does not execute code, it is based only on lex and syntax parsing.
@@ -56,6 +61,7 @@ def cli(paths, object_only, file_path, distance, matplotlib, output):
         distance=distance,
         matplotlib=matplotlib,
         output=output,
+        csv=csv,
     )
     main(args)
 
@@ -72,6 +78,10 @@ def main(args):
             click.echo(f"  Distance {distance}: {', '.join(files)}")
     elif args.object_only:
         pprint.pprint(usage_graph)
+    elif args.csv:
+        import codegraph.vizualyzer as vz
+
+        vz.export_to_csv(usage_graph, entity_metadata=entity_metadata, output_path=args.csv)
     else:
         import codegraph.vizualyzer as vz
 

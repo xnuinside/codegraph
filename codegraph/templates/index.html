@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeGraph - Interactive Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+/* STYLES_PLACEHOLDER */
+    </style>
+</head>
+<body>
+    <div id="graph"></div>
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- Search box -->
+    <div class="search-container">
+        <div class="search-box">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search nodes... (Ctrl+F)" autocomplete="off">
+            <button class="search-clear" id="searchClear">&times;</button>
+            <div class="autocomplete-list" id="autocompleteList"></div>
+        </div>
+    </div>
+
+    <!-- Highlight info banner -->
+    <div class="highlight-info" id="highlightInfo">
+        <span id="highlightText">Highlighting: </span>
+        <button id="clearHighlight">Clear (Esc)</button>
+    </div>
+
+    <div class="panel controls" id="controls-panel">
+        <div class="panel-header">
+            <h4>Controls</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <p><kbd>Ctrl+F</kbd> Search nodes</p>
+            <p><kbd>Scroll</kbd> Zoom in/out</p>
+            <p><kbd>Drag</kbd> on background - Pan</p>
+            <p><kbd>Drag</kbd> on node - Pin node position</p>
+            <p><kbd>Click</kbd> module/entity - Collapse/Expand</p>
+            <p><kbd>Double-click</kbd> - Unpin / Focus on node</p>
+            <p><kbd>Esc</kbd> Clear search highlight</p>
+        </div>
+    </div>
+    <div class="panel legend" id="legend-panel">
+        <div class="panel-header">
+            <h4>Legend</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <div class="legend-section">
+                <h4>Nodes</h4>
+                <div class="legend-item">
+                    <div class="legend-color legend-module"></div>
+                    <span>Module (.py file)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-entity"></div>
+                    <span>Entity (function/class)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-external"></div>
+                    <span>External dependency</span>
+                </div>
+            </div>
+            <div class="legend-section">
+                <h4>Links</h4>
+                <div class="legend-item">
+                    <div class="legend-line legend-link-module"></div>
+                    <span>Module → Module</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line legend-link-entity" style="border-top: 2px dashed #009c2c; background: none; height: 0;"></div>
+                    <span>Module → Entity</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line legend-link-dep"></div>
+                    <span>Entity → Dependency</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="panel stats" id="stats">
+        <div class="panel-header">
+            <h4>Statistics</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content" id="stats-content"></div>
+    </div>
+    <div class="panel unlinked-modules" id="unlinked-modules">
+        <div class="panel-header">
+            <h4>Connections</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <div class="unlinked-tabs">
+                <button class="unlinked-tab active" data-tab="unlinked-list">Unlinked <span class="count" id="unlinked-count"></span></button>
+                <button class="unlinked-tab" data-tab="links-count-list">Links count <span class="count" id="links-count"></span></button>
+            </div>
+            <div id="unlinked-list" class="unlinked-tab-content active"></div>
+            <div id="links-count-list" class="unlinked-tab-content">
+                <div class="links-filter">
+                    <div class="filter-row">
+                        <label><input type="checkbox" id="links-in-check" checked> Links in</label>
+                        <label><input type="checkbox" id="links-out-check" checked> Links out</label>
+                    </div>
+                    <div class="filter-row">
+                        <span>More than:</span>
+                        <input type="number" id="links-threshold" value="5" min="0">
+                    </div>
+                </div>
+                <div id="links-count-content"></div>
+            </div>
+        </div>
+    </div>
+    <div class="panel massive-objects" id="massive-objects">
+        <div class="panel-header">
+            <h4>Massive Objects <span class="count" id="massive-count"></span></h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <div class="filters">
+                <div class="filter-row">
+                    <label><input type="checkbox" id="filter-modules" checked> Modules</label>
+                    <label><input type="checkbox" id="filter-classes" checked> Classes</label>
+                    <label><input type="checkbox" id="filter-functions" checked> Functions</label>
+                </div>
+                <div class="filter-row">
+                    <span>Min lines:</span>
+                    <input type="number" id="massive-threshold" value="50" min="1">
+                </div>
+            </div>
+            <ul id="massive-list"></ul>
+        </div>
+    </div>
+    <div class="panel size-toggle" id="size-toggle-panel">
+        <div class="panel-header">
+            <h4>Display</h4>
+            <button class="panel-toggle" title="Collapse">−</button>
+        </div>
+        <div class="panel-content">
+            <label>
+                <input type="checkbox" id="size-by-code" checked>
+                Size by lines of code
+            </label>
+            <div class="display-section">
+                <h5>Show nodes</h5>
+                <label><input type="checkbox" id="show-modules" checked> Modules</label>
+                <label><input type="checkbox" id="show-classes" checked> Classes</label>
+                <label><input type="checkbox" id="show-functions" checked> Functions</label>
+                <label><input type="checkbox" id="show-external" checked> External</label>
+            </div>
+            <div class="display-section">
+                <h5>Show links</h5>
+                <label><input type="checkbox" id="show-link-module" checked> Module → Module</label>
+                <label><input type="checkbox" id="show-link-entity" checked> Module → Entity</label>
+                <label><input type="checkbox" id="show-link-dependency" checked> Dependencies</label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const graphData = /* GRAPH_DATA_PLACEHOLDER */;
+
+/* SCRIPT_PLACEHOLDER */
+    </script>
+</body>
+</html>

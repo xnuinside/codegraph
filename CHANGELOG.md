@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-18
+
+### Added
+
+**Enhanced Tooltips**
+- Node tooltips now display "Links out" and "Links in" counts
+- Color-coded: orange for outgoing links, green for incoming links
+- Helps quickly understand node connectivity
+
+**Links Count Panel**
+- New "Links count" tab in the Unlinked Modules panel
+- Configurable threshold filter (default: 1) to find nodes by connection count
+- Checkboxes to filter by "links in" or "links out" criteria
+- Click on any item to navigate and zoom to it on the graph
+- Useful for finding highly connected or isolated nodes
+
+**Display Filters**
+- Show/hide nodes by type: Modules, Classes, Functions, External
+- Show/hide links by type: Module→Module, Module→Entity, Dependencies
+- All filters available in the expanded Display panel
+
+**CSV Export**
+- New `--csv PATH` option to export graph data to CSV file
+- Columns: name, type (module/function/class/external), parent_module, full_path, links_out, links_in, lines
+- Example: `codegraph /path/to/code --csv output.csv`
+
+### Changed
+
+- Legend panel moved to the right of Controls panel (both at top-left area)
+- Renamed "Unlinked Modules" panel header, now uses tabs interface
+- "Unlinked" is now a tab showing modules with zero connections
+- "Links count" tab provides flexible filtering by connection count
+
+### Refactored
+
+**Template Extraction**
+- HTML, CSS, and JavaScript moved to separate files in `codegraph/templates/`
+- `templates/index.html` - HTML structure with placeholders
+- `templates/styles.css` - all CSS styles
+- `templates/main.js` - all JavaScript code
+- `vizualyzer.py` reduced from ~2000 to ~340 lines
+- Easier to maintain and edit frontend code separately
+
 ## [1.1.0] - 2025-01-18
 
 ### Added
