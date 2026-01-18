@@ -27,6 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "Unlinked" is now a tab showing modules with zero connections
 - "Links count" tab provides flexible filtering by connection count
 
+### Refactored
+
+**Template Extraction**
+- HTML, CSS, and JavaScript moved to separate files in `codegraph/templates/`
+- `templates/index.html` - HTML structure with placeholders
+- `templates/styles.css` - all CSS styles
+- `templates/main.js` - all JavaScript code
+- `vizualyzer.py` reduced from ~2000 to ~340 lines
+- Easier to maintain and edit frontend code separately
+
 ## [1.1.0] - 2025-01-18
 
 ### Added
