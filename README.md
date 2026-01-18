@@ -63,8 +63,26 @@ This will generate an interactive HTML visualization and open it in your browser
 | Option | Description |
 |--------|-------------|
 | `--output PATH` | Custom output path for HTML file (default: `./codegraph.html`) |
+| `--csv PATH` | Export graph data to CSV file |
 | `--matplotlib` | Use legacy matplotlib visualization instead of D3.js |
 | `-o, --object-only` | Print dependencies to console only, no visualization |
+
+### CSV Export
+
+Export graph data to CSV for analysis in spreadsheets or other tools:
+
+```console
+codegraph /path/to/code --csv output.csv
+```
+
+CSV columns:
+- `name` - Entity name
+- `type` - module / function / class / external
+- `parent_module` - Parent module (for functions/classes)
+- `full_path` - File path
+- `links_out` - Outgoing dependencies count
+- `links_in` - Incoming dependencies count
+- `lines` - Lines of code
 
 ## Changelog
 
