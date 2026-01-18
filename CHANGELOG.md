@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-18
+
+### Added
+
+**Enhanced Tooltips**
+- Node tooltips now display "Links out" and "Links in" counts
+- Color-coded: orange for outgoing links, green for incoming links
+- Helps quickly understand node connectivity
+
+**Links Count Panel**
+- New "Links count" tab in the Unlinked Modules panel
+- Configurable threshold filter (default: 1) to find nodes by connection count
+- Checkboxes to filter by "links in" or "links out" criteria
+- Click on any item to navigate and zoom to it on the graph
+- Useful for finding highly connected or isolated nodes
+
+### Changed
+
+- Renamed "Unlinked Modules" panel header, now uses tabs interface
+- "Unlinked" is now a tab showing modules with zero connections
+- "Links count" tab provides flexible filtering by connection count
+
 ## [1.1.0] - 2025-01-18
 
 ### Added

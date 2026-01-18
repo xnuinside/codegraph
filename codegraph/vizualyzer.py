@@ -393,6 +393,21 @@ def get_d3_html_template(graph_data: Dict) -> str:
             border: 1px solid #555;
             max-width: 300px;
         }}
+        .tooltip .links-info {{
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #444;
+        }}
+        .tooltip .links-info span {{
+            display: inline-block;
+            margin-right: 12px;
+        }}
+        .tooltip .links-in {{
+            color: #4CAF50;
+        }}
+        .tooltip .links-out {{
+            color: #ff9800;
+        }}
         .controls {{
             top: 10px;
             left: 10px;
@@ -457,8 +472,8 @@ def get_d3_html_template(graph_data: Dict) -> str:
         .unlinked-modules {{
             top: 130px;
             right: 10px;
-            max-height: 300px;
-            max-width: 280px;
+            max-height: 400px;
+            max-width: 300px;
         }}
         .unlinked-modules .panel-header h4 {{
             color: #ff9800;
@@ -468,10 +483,74 @@ def get_d3_html_template(graph_data: Dict) -> str:
             font-size: 11px;
             margin-left: 5px;
         }}
+        /* Tabs inside unlinked panel */
+        .unlinked-tabs {{
+            display: flex;
+            border-bottom: 1px solid #333;
+            margin-bottom: 10px;
+        }}
+        .unlinked-tab {{
+            flex: 1;
+            padding: 8px 4px;
+            background: none;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 11px;
+            transition: color 0.2s, background 0.2s;
+            text-align: center;
+        }}
+        .unlinked-tab:hover {{
+            color: #ccc;
+        }}
+        .unlinked-tab.active {{
+            color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+            border-bottom: 2px solid #ff9800;
+        }}
+        .unlinked-tab-content {{
+            display: none;
+        }}
+        .unlinked-tab-content.active {{
+            display: block;
+        }}
+        /* Links filter in Links count tab */
+        .links-filter {{
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }}
+        .links-filter .filter-row {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }}
+        .links-filter label {{
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }}
+        .links-filter input[type="checkbox"] {{
+            cursor: pointer;
+        }}
+        .links-filter input[type="number"] {{
+            width: 50px;
+            padding: 4px 6px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background: #333;
+            color: #fff;
+            font-size: 11px;
+        }}
         .unlinked-modules ul {{
             list-style: none;
             margin: 0;
             padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
         }}
         .unlinked-modules li {{
             padding: 4px 8px;
@@ -491,6 +570,14 @@ def get_d3_html_template(graph_data: Dict) -> str:
             font-size: 10px;
             display: block;
             margin-top: 2px;
+        }}
+        .unlinked-modules li .links-count {{
+            color: #ff9800;
+            font-weight: bold;
+        }}
+        .unlinked-modules li .entity-type {{
+            color: #888;
+            font-size: 10px;
         }}
         .unlinked-modules::-webkit-scrollbar {{
             width: 6px;
@@ -880,10 +967,29 @@ def get_d3_html_template(graph_data: Dict) -> str:
     </div>
     <div class="panel unlinked-modules" id="unlinked-modules">
         <div class="panel-header">
-            <h4>Unlinked <span class="count" id="unlinked-count"></span></h4>
+            <h4>Connections</h4>
             <button class="panel-toggle" title="Collapse">−</button>
         </div>
-        <div class="panel-content" id="unlinked-content"></div>
+        <div class="panel-content">
+            <div class="unlinked-tabs">
+                <button class="unlinked-tab active" data-tab="unlinked-list">Unlinked <span class="count" id="unlinked-count"></span></button>
+                <button class="unlinked-tab" data-tab="links-count-list">Links count <span class="count" id="links-count"></span></button>
+            </div>
+            <div id="unlinked-list" class="unlinked-tab-content active"></div>
+            <div id="links-count-list" class="unlinked-tab-content">
+                <div class="links-filter">
+                    <div class="filter-row">
+                        <label><input type="checkbox" id="links-in-check" checked> Links in</label>
+                        <label><input type="checkbox" id="links-out-check" checked> Links out</label>
+                    </div>
+                    <div class="filter-row">
+                        <span>More than:</span>
+                        <input type="number" id="links-threshold" value="5" min="0">
+                    </div>
+                </div>
+                <div id="links-count-content"></div>
+            </div>
+        </div>
     </div>
     <div class="panel massive-objects" id="massive-objects">
         <div class="panel-header">
@@ -976,12 +1082,23 @@ def get_d3_html_template(graph_data: Dict) -> str:
             <p>Module connections: ${{moduleLinks}}</p>
         `;
 
+        // Calculate links count for each node
+        const nodeLinksMap = {{}};
+        graphData.nodes.forEach(n => {{
+            nodeLinksMap[n.id] = {{ linksIn: 0, linksOut: 0 }};
+        }});
+        graphData.links.forEach(l => {{
+            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            if (nodeLinksMap[sourceId]) nodeLinksMap[sourceId].linksOut++;
+            if (nodeLinksMap[targetId]) nodeLinksMap[targetId].linksIn++;
+        }});
+
         // Populate unlinked modules panel
         const unlinkedModules = graphData.unlinkedModules || [];
-        const unlinkedPanel = document.getElementById('unlinked-modules');
+        document.getElementById('unlinked-count').textContent = `(${{unlinkedModules.length}})`;
         if (unlinkedModules.length > 0) {{
-            document.getElementById('unlinked-count').textContent = `(${{unlinkedModules.length}})`;
-            document.getElementById('unlinked-content').innerHTML = `
+            document.getElementById('unlinked-list').innerHTML = `
                 <ul>
                     ${{unlinkedModules.map(m => `
                         <li data-module-id="${{m.id}}" title="${{m.fullPath}}">
@@ -992,8 +1109,69 @@ def get_d3_html_template(graph_data: Dict) -> str:
                 </ul>
             `;
         }} else {{
-            unlinkedPanel.style.display = 'none';
+            document.getElementById('unlinked-list').innerHTML = '<p style="color: #888; padding: 5px;">No unlinked modules</p>';
         }}
+
+        // Tab switching for unlinked panel
+        document.querySelectorAll('.unlinked-tab').forEach(tab => {{
+            tab.addEventListener('click', () => {{
+                document.querySelectorAll('.unlinked-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.unlinked-tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            }});
+        }});
+
+        // Links count filter function
+        function updateLinksCount() {{
+            const threshold = parseInt(document.getElementById('links-threshold').value) || 0;
+            const countIn = document.getElementById('links-in-check').checked;
+            const countOut = document.getElementById('links-out-check').checked;
+
+            const nodesWithLinks = graphData.nodes
+                .filter(n => n.type === 'module' || n.type === 'entity')
+                .map(n => {{
+                    const links = nodeLinksMap[n.id] || {{ linksIn: 0, linksOut: 0 }};
+                    let total = 0;
+                    if (countIn && countOut) total = links.linksIn + links.linksOut;
+                    else if (countIn) total = links.linksIn;
+                    else if (countOut) total = links.linksOut;
+                    return {{ ...n, linksIn: links.linksIn, linksOut: links.linksOut, totalLinks: total }};
+                }})
+                .filter(n => n.totalLinks > threshold)
+                .sort((a, b) => b.totalLinks - a.totalLinks);
+
+            document.getElementById('links-count').textContent = `(${{nodesWithLinks.length}})`;
+
+            if (nodesWithLinks.length > 0) {{
+                document.getElementById('links-count-content').innerHTML = `
+                    <ul>
+                        ${{nodesWithLinks.map(n => `
+                            <li data-node-id="${{n.id}}" title="${{n.type === 'module' ? n.fullPath : n.parent}}">
+                                <span class="links-count">${{n.totalLinks}}</span> ${{n.label || n.id}}
+                                <span class="entity-type">${{n.type === 'module' ? 'module' : n.entityType}}</span>
+                            </li>
+                        `).join('')}}
+                    </ul>
+                `;
+
+                // Add click handlers for links count items
+                document.querySelectorAll('#links-count-content li').forEach(li => {{
+                    li.addEventListener('click', () => {{
+                        const nodeId = li.dataset.nodeId;
+                        highlightNode(nodeId);
+                    }});
+                }});
+            }} else {{
+                document.getElementById('links-count-content').innerHTML = '<p style="color: #888;">No matching nodes</p>';
+            }}
+        }}
+
+        // Initialize links count and add event listeners
+        document.getElementById('links-in-check').addEventListener('change', updateLinksCount);
+        document.getElementById('links-out-check').addEventListener('change', updateLinksCount);
+        document.getElementById('links-threshold').addEventListener('input', updateLinksCount);
+        updateLinksCount();
 
         // Size scaling state
         let sizeByCode = true;
@@ -1261,8 +1439,11 @@ def get_d3_html_template(graph_data: Dict) -> str:
                     ${{d.lines ? 'Lines of code: ' + d.lines + '<br>' : ''}}
                     ${{d.fullPath ? 'Full Path: ' + d.fullPath + '<br>' : ''}}
                     ${{d.parent ? 'Module: ' + d.parent + '<br>' : ''}}
-                    Outgoing: ${{outgoing}} | Incoming: ${{incoming}}
-                    ${{collapsedNodes.has(d.id) ? '<br><em>(collapsed)</em>' : ''}}
+                    <div class="links-info">
+                        <span class="links-out">Links out: ${{outgoing}}</span>
+                        <span class="links-in">Links in: ${{incoming}}</span>
+                    </div>
+                    ${{collapsedNodes.has(d.id) ? '<em>(collapsed)</em>' : ''}}
                 `);
         }})
         .on("mouseout", function() {{
@@ -1731,7 +1912,7 @@ def get_d3_html_template(graph_data: Dict) -> str:
         }});
 
         // Orphan modules click handler - navigate to module node
-        document.querySelectorAll('#unlinked-content li').forEach(li => {{
+        document.querySelectorAll('#unlinked-list li').forEach(li => {{
             li.addEventListener('click', () => {{
                 const moduleId = li.dataset.moduleId;
                 const targetNode = graphData.nodes.find(n => n.id === moduleId);
