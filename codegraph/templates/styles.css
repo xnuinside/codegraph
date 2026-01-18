@@ -129,8 +129,7 @@ body {
     font-family: monospace;
 }
 .legend {
-    top: 270px;
-    left: 10px;
+    inset: 10px auto auto 290px;
 }
 .legend .panel-header h4 {
     color: #70b8ff;

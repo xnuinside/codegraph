@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Legend panel moved to the right of Controls panel (both at top-left area)
 - Renamed "Unlinked Modules" panel header, now uses tabs interface
 - "Unlinked" is now a tab showing modules with zero connections
 - "Links count" tab provides flexible filtering by connection count
