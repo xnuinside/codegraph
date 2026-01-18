@@ -366,6 +366,99 @@ document.getElementById('size-by-code').addEventListener('change', function() {
     updateNodeSizes();
 });
 
+// Display filter state
+const displayFilters = {
+    showModules: true,
+    showClasses: true,
+    showFunctions: true,
+    showExternal: true,
+    showLinkModule: true,
+    showLinkEntity: true,
+    showLinkDependency: true
+};
+
+// Display filter event listeners
+document.getElementById('show-modules').addEventListener('change', function() {
+    displayFilters.showModules = this.checked;
+    updateDisplayFilters();
+});
+document.getElementById('show-classes').addEventListener('change', function() {
+    displayFilters.showClasses = this.checked;
+    updateDisplayFilters();
+});
+document.getElementById('show-functions').addEventListener('change', function() {
+    displayFilters.showFunctions = this.checked;
+    updateDisplayFilters();
+});
+document.getElementById('show-external').addEventListener('change', function() {
+    displayFilters.showExternal = this.checked;
+    updateDisplayFilters();
+});
+document.getElementById('show-link-module').addEventListener('change', function() {
+    displayFilters.showLinkModule = this.checked;
+    updateDisplayFilters();
+});
+document.getElementById('show-link-entity').addEventListener('change', function() {
+    displayFilters.showLinkEntity = this.checked;
+    updateDisplayFilters();
+});
+document.getElementById('show-link-dependency').addEventListener('change', function() {
+    displayFilters.showLinkDependency = this.checked;
+    updateDisplayFilters();
+});
+
+// Check if node should be hidden by display filter
+function isNodeFilteredOut(nodeData) {
+    if (nodeData.type === 'module') return !displayFilters.showModules;
+    if (nodeData.type === 'external') return !displayFilters.showExternal;
+    if (nodeData.type === 'entity') {
+        if (nodeData.entityType === 'class') return !displayFilters.showClasses;
+        if (nodeData.entityType === 'function') return !displayFilters.showFunctions;
+    }
+    return false;
+}
+
+// Check if link should be hidden by display filter
+function isLinkFilteredOut(linkData) {
+    if (linkData.type === 'module-module') return !displayFilters.showLinkModule;
+    if (linkData.type === 'module-entity') return !displayFilters.showLinkEntity;
+    if (linkData.type === 'dependency') return !displayFilters.showLinkDependency;
+    return false;
+}
+
+// Update display based on filters
+function updateDisplayFilters() {
+    // Update node visibility
+    node.classed("node-hidden", d => isNodeFilteredOut(d) || isNodeHidden(d));
+
+    // Update label visibility
+    labels.classed("label-hidden", d => isNodeFilteredOut(d) || isNodeHidden(d));
+
+    // Update link visibility
+    link.classed("link-hidden", d => {
+        // First check display filter
+        if (isLinkFilteredOut(d)) return true;
+
+        // Check if connected nodes are filtered out
+        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        const sourceNode = graphData.nodes.find(n => n.id === sourceId);
+        const targetNode = graphData.nodes.find(n => n.id === targetId);
+
+        if (sourceNode && isNodeFilteredOut(sourceNode)) return true;
+        if (targetNode && isNodeFilteredOut(targetNode)) return true;
+
+        // Then check collapse state
+        if (d.type === 'module-module') return false;
+        if (sourceNode && isNodeHidden(sourceNode)) return true;
+        if (targetNode && isNodeHidden(targetNode)) return true;
+        if (d.type === 'module-entity' && collapsedNodes.has(sourceId)) return true;
+        if (d.type === 'dependency' && collapsedNodes.has(sourceId)) return true;
+
+        return false;
+    });
+}
+
 // Add labels with dynamic positioning based on node size
 const labels = g.append("g")
     .selectAll("text")
@@ -514,40 +607,8 @@ function isNodeHidden(nodeData) {
 }
 
 function updateVisibility() {
-    // Update node visibility
-    node.classed("node-hidden", d => isNodeHidden(d));
-
-    // Update label visibility
-    labels.classed("label-hidden", d => isNodeHidden(d));
-
-    // Update link visibility
-    link.classed("link-hidden", d => {
-        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-
-        // Module-module links are only hidden if connecting collapsed modules in certain ways
-        if (d.type === 'module-module') {
-            return false; // Always show module-module links
-        }
-
-        const sourceNode = graphData.nodes.find(n => n.id === sourceId);
-        const targetNode = graphData.nodes.find(n => n.id === targetId);
-
-        if (sourceNode && isNodeHidden(sourceNode)) return true;
-        if (targetNode && isNodeHidden(targetNode)) return true;
-
-        // Hide module-entity links if module is collapsed
-        if (d.type === 'module-entity' && collapsedNodes.has(sourceId)) {
-            return true;
-        }
-
-        // Hide dependency links if source entity is collapsed
-        if (d.type === 'dependency' && collapsedNodes.has(sourceId)) {
-            return true;
-        }
-
-        return false;
-    });
+    // Use updateDisplayFilters which handles both collapse state and display filters
+    updateDisplayFilters();
 }
 
 // Simulation tick

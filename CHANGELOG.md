@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Click on any item to navigate and zoom to it on the graph
 - Useful for finding highly connected or isolated nodes
 
+**Display Filters**
+- Show/hide nodes by type: Modules, Classes, Functions, External
+- Show/hide links by type: Module→Module, Module→Entity, Dependencies
+- All filters available in the expanded Display panel
+
 ### Changed
 
 - Renamed "Unlinked Modules" panel header, now uses tabs interface

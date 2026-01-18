@@ -416,6 +416,7 @@ body {
 .size-toggle {
     bottom: 10px;
     left: 10px;
+    min-width: 180px;
 }
 .size-toggle .panel-header h4 {
     color: #9c27b0;
@@ -425,11 +426,23 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
+    margin: 3px 0;
 }
 .size-toggle input[type="checkbox"] {
     cursor: pointer;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
+}
+.size-toggle .display-section {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+}
+.size-toggle .display-section h5 {
+    margin: 0 0 8px 0;
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
 }
 /* Search box styles */
 .search-container {
