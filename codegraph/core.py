@@ -60,6 +60,37 @@ class CodeGraph:
                 data[module][func.name] = (func.lineno, func.endno)
         return data
 
+    def get_entity_metadata(self) -> Dict:
+        """
+        Return metadata for all entities including line counts and types.
+        :return: {module_path: {entity_name: {'lines': int, 'type': 'function'|'class'}}}
+        """
+        from codegraph.parser import Class, Function, AsyncFunction, Import
+
+        data = {}
+        for module_path in self.modules_data:
+            data[module_path] = {}
+            for entity in self.modules_data[module_path]:
+                if isinstance(entity, Import):
+                    continue
+                lines = 0
+                if entity.lineno and entity.endno:
+                    lines = entity.endno - entity.lineno + 1
+
+                entity_type = "function"
+                if isinstance(entity, Class):
+                    entity_type = "class"
+                elif isinstance(entity, (Function, AsyncFunction)):
+                    entity_type = "function"
+
+                data[module_path][entity.name] = {
+                    "lines": lines,
+                    "entity_type": entity_type,
+                    "lineno": entity.lineno,
+                    "endno": entity.endno
+                }
+        return data
+
     def usage_graph(self) -> Dict:
         """
             module name: function

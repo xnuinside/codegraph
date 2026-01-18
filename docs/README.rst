@@ -19,6 +19,10 @@ CodeGraph - static code analyzator, that create a diagram with your code structu
    :target: https://github.com/xnuinside/codegraph/actions/workflows/main.yml/badge.svg
    :alt: workflow
 
+.. image:: https://codecov.io/gh/xnuinside/codegraph/branch/main/graph/badge.svg
+   :target: https://codecov.io/gh/xnuinside/codegraph
+   :alt: codecov
+
 
 `Live Demo <https://xnuinside.github.io/codegraph/>`_ - Interactive visualization of `simple-ddl-parser <https://github.com/xnuinside/simple-ddl-parser>`_ codebase
 
@@ -78,6 +82,28 @@ Unlinked Modules
 
 **Unlinked Panel** - Shows modules with no connections. Click to navigate to them on the graph.
 
+Massive Objects Detection
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. image:: img/massive_objects_detection.png
+   :target: img/massive_objects_detection.png
+   :alt: Massive Objects Detection
+
+
+**Massive Objects Panel** - Find large code entities (modules, classes, functions) by lines of code. Filter by type and set custom threshold.
+
+Display Settings
+^^^^^^^^^^^^^^^^
+
+
+.. image:: img/graph_display_settings.png
+   :target: img/graph_display_settings.png
+   :alt: Display Settings
+
+
+**Size by Lines of Code** - Toggle node size scaling based on lines of code. Larger nodes = more code.
+
 UI Tips
 ^^^^^^^
 
@@ -89,6 +115,8 @@ UI Tips
 
 **Built-in Help** - Legend and keyboard shortcuts are always visible in the UI.
 
+**Draggable Panels** - All UI panels can be dragged and collapsed for a cleaner view.
+
 ----
 
 Installation
@@ -97,6 +125,12 @@ Installation
 .. code-block:: console
 
    pip install codegraph
+
+For legacy matplotlib visualization support:
+
+.. code-block:: console
+
+   pip install codegraph[matplotlib]
 
 Usage
 ^^^^^
@@ -118,7 +152,7 @@ CLI Options
    * - ``--output PATH``
      - Custom output path for HTML file (default: ``./codegraph.html``\ )
    * - ``--matplotlib``
-     - Use legacy matplotlib visualization instead of D3.js
+     - Use legacy matplotlib visualization instead of D3.js (requires ``codegraph[matplotlib]``\ )
    * - ``-o, --object-only``
      - Print dependencies to console only, no visualization
 

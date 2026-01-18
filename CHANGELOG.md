@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-18
+
+### Added
+
+**Massive Objects Detection**
+- New "Massive Objects" panel to find large code entities by lines of code
+- Filter by type: modules, classes, functions
+- Configurable threshold (default: 50 lines)
+- Click on any item to highlight it on the graph
+
+**Lines of Code Tracking**
+- Each entity (function, class, module) now tracks lines of code
+- Lines of code displayed in tooltips
+- Node size scales based on lines of code (toggleable in Display panel)
+
+**Improved UI Panels**
+- All panels are now draggable - move them anywhere on screen
+- All panels are collapsible - click the toggle button to minimize
+- Display panel with "Size by lines of code" toggle
+
+**Smart Initial Zoom**
+- Graph now auto-zooms based on node count
+- Large graphs start more zoomed out for better overview
+
+### Changed
+
+**matplotlib is now optional**
+- D3.js visualization works without matplotlib installed
+- Install with `pip install codegraph[matplotlib]` for legacy matplotlib support
+- Reduces installation size and dependencies for most users
+
+### Testing
+- Added package installation tests (`tests/test_package_install.py`)
+- Tests verify package works without matplotlib
+- Added CI jobs for package build and installation testing
+- tox environments for testing with and without matplotlib
+
 ## [1.0.0] - 2025-01-18
 
 ### Added
