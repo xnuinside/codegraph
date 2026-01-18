@@ -28,13 +28,31 @@ It is based only on lexical and syntax parsing, so it doesn't need to install al
 
 ![Node Information](docs/img/node_information.png)
 
-**Tooltips** - Hover over any node to see details: type, parent module, full path, and connection count.
+**Tooltips** - Hover over any node to see details: type, parent module, full path, lines of code, and connection counts (links in/out).
+
+### Links Count
+
+![Links Count](docs/img/links_count.png)
+
+**Links Count Panel** - Find nodes by their connection count. Filter by "links in" or "links out" with configurable threshold.
 
 ### Unlinked Modules
 
 ![Unlinked Nodes](docs/img/listing_unlinked_nodes.png)
 
 **Unlinked Panel** - Shows modules with no connections. Click to navigate to them on the graph.
+
+### Massive Objects Detection
+
+![Massive Objects](docs/img/massive_objects_detection.png)
+
+**Massive Objects Panel** - Find large code entities by lines of code. Filter by type (modules, classes, functions) with configurable threshold.
+
+### Display Settings
+
+![Display Settings](docs/img/graph_display_settings.png)
+
+**Display Filters** - Show/hide nodes by type (Modules, Classes, Functions, External) and links by type (Module→Module, Module→Entity, Dependencies).
 
 ### UI Tips
 
