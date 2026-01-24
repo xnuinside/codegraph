@@ -8,6 +8,7 @@ from argparse import Namespace
 import click
 
 from codegraph import __version__, core
+from codegraph.parsers import available_languages
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,18 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
     type=click.Path(),
     help="Export graph data to CSV file (specify output path)",
 )
-def cli(paths, object_only, file_path, distance, matplotlib, output, csv):
+@click.option(
+    "--language",
+    type=click.Choice(available_languages(), case_sensitive=False),
+    default="python",
+    show_default=True,
+    help="Language parser to use",
+)
+@click.option(
+    "--python-version",
+    help="Target Python version for parsing (e.g. 2.7, 3.8, 3.10)",
+)
+def cli(paths, object_only, file_path, distance, matplotlib, output, csv, language, python_version):
     """
     Tool that creates a graph of code to show dependencies between code entities (methods, classes, etc.).
     CodeGraph does not execute code, it is based only on lex and syntax parsing.
@@ -62,6 +74,8 @@ def cli(paths, object_only, file_path, distance, matplotlib, output, csv):
         matplotlib=matplotlib,
         output=output,
         csv=csv,
+        language=language,
+        python_version=python_version,
     )
     main(args)
 

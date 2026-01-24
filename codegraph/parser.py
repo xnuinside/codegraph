@@ -121,7 +121,8 @@ def create_objects_array(fname, source):  # noqa: C901
                 new_lines += 1
 
             elif token == "import":
-                modules = [_line.replace("\n", "").split("import ")[1]]
+                modules_part = _line.replace("\n", "").split("import ", 1)[1]
+                modules = [part.strip() for part in modules_part.split(",") if part.strip()]
                 if not imports:
                     imports = Import(modules)
                 else:

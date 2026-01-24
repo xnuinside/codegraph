@@ -313,8 +313,8 @@ class TestCodeGraphOnItself:
         main_deps = usage_graph[main_path]["main"]
         assert any("core" in str(d) for d in main_deps)
 
-    def test_core_utils_connection(self):
-        """Test that core.py -> utils.py connection is detected."""
+    def test_core_parsers_connection(self):
+        """Test that core.py -> parsers connection is detected."""
         codegraph_path = pathlib.Path(__file__).parents[1] / "codegraph"
         args = Namespace(paths=[codegraph_path.as_posix()])
         usage_graph = CodeGraph(args).usage_graph()
@@ -329,9 +329,9 @@ class TestCodeGraphOnItself:
         assert core_path is not None
         assert "CodeGraph" in usage_graph[core_path]
 
-        # CodeGraph class should use utils.get_python_paths_list
+        # CodeGraph class should use parsers.get_parser
         codegraph_deps = usage_graph[core_path]["CodeGraph"]
-        assert any("utils" in str(d) for d in codegraph_deps)
+        assert any("parsers" in str(d) for d in codegraph_deps)
 
 
 class TestCSVExport:
