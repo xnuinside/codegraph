@@ -1,4 +1,5 @@
 """Test module for comma-separated imports."""
+
 from tests.test_data import module_a, module_b, module_c
 
 

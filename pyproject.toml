@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "codegraph"
-version = "1.2.0"
+version = "1.3.0"
 license = "MIT"
 readme = "docs/README.rst"
 homepage = "https://github.com/xnuinside/codegraph"
@@ -22,6 +22,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = "^3.9"
 click = ">=8.0"
+typed-ast = ">=1.5"
 
 [tool.poetry.extras]
 matplotlib = ["matplotlib", "networkx"]
@@ -37,7 +38,8 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0"
 pytest-cov = ">=4.0"
-flake8 = ">=5.0"
+black = ">=24.0"
+ruff = ">=0.6"
 pre-commit = ">=2.20"
 tox = ">=4.0"
 twine = ">=6.0"
@@ -65,3 +67,15 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "raise NotImplementedError",
 ]
+
+[tool.black]
+line-length = 120
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+per-file-ignores = { "__init__.py" = ["F401"] }
