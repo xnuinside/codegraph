@@ -4,7 +4,6 @@ from codegraph.parsers.base import BaseParser
 from codegraph.parsers.python_parser import PythonParser
 from codegraph.parsers.rust_parser import RustParser
 
-
 _PARSERS: Dict[str, Type[BaseParser]] = {
     "python": PythonParser,
     "rust": RustParser,

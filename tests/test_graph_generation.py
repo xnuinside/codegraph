@@ -1,4 +1,5 @@
 """Tests for graph generation functionality."""
+
 import csv
 import pathlib
 import tempfile
@@ -7,7 +8,6 @@ from argparse import Namespace
 from codegraph.core import CodeGraph
 from codegraph.parser import create_objects_array, Import
 from codegraph.vizualyzer import convert_to_d3_format, export_to_csv
-
 
 TEST_DATA_DIR = pathlib.Path(__file__).parent / "test_data"
 
@@ -121,7 +121,7 @@ class MultiLineInherit(
     pass
 """
         result = create_objects_array("test.py", source)
-        classes = [c for c in result if hasattr(c, 'super')]
+        classes = [c for c in result if hasattr(c, "super")]
 
         child = next(c for c in classes if c.name == "Child")
         assert "Base1" in child.super
@@ -222,9 +222,7 @@ class TestD3FormatConversion:
         result = convert_to_d3_format(usage_graph)
 
         # Should have module-entity links
-        module_entity_links = [
-            link for link in result["links"] if link["type"] == "module-entity"
-        ]
+        module_entity_links = [link for link in result["links"] if link["type"] == "module-entity"]
         assert len(module_entity_links) >= 2
 
     def test_dependency_links(self):
@@ -345,7 +343,7 @@ class TestCSVExport:
                 "func_b": [],
             }
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             output_path = f.name
 
         export_to_csv(usage_graph, output_path=output_path)
@@ -360,16 +358,16 @@ class TestCSVExport:
                 "func_a": [],
             }
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             output_path = f.name
 
         export_to_csv(usage_graph, output_path=output_path)
 
-        with open(output_path, 'r') as csvfile:
+        with open(output_path, "r") as csvfile:
             reader = csv.DictReader(csvfile)
             fieldnames = reader.fieldnames
 
-        expected_columns = ['name', 'type', 'parent_module', 'full_path', 'links_out', 'links_in', 'lines']
+        expected_columns = ["name", "type", "parent_module", "full_path", "links_out", "links_in", "lines"]
         assert fieldnames == expected_columns
         pathlib.Path(output_path).unlink()
 
@@ -380,25 +378,21 @@ class TestCSVExport:
                 "func_a": [],
             }
         }
-        entity_metadata = {
-            "/path/to/module.py": {
-                "func_a": {"lines": 10, "entity_type": "function"}
-            }
-        }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        entity_metadata = {"/path/to/module.py": {"func_a": {"lines": 10, "entity_type": "function"}}}
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             output_path = f.name
 
         export_to_csv(usage_graph, entity_metadata=entity_metadata, output_path=output_path)
 
-        with open(output_path, 'r') as csvfile:
+        with open(output_path, "r") as csvfile:
             reader = csv.DictReader(csvfile)
             rows = list(reader)
 
         # Find module row
-        module_row = next((r for r in rows if r['type'] == 'module'), None)
+        module_row = next((r for r in rows if r["type"] == "module"), None)
         assert module_row is not None
-        assert module_row['name'] == 'module.py'
-        assert module_row['parent_module'] == ''
+        assert module_row["name"] == "module.py"
+        assert module_row["parent_module"] == ""
 
         pathlib.Path(output_path).unlink()
 
@@ -416,27 +410,27 @@ class TestCSVExport:
                 "MyClass": {"lines": 50, "entity_type": "class"},
             }
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             output_path = f.name
 
         export_to_csv(usage_graph, entity_metadata=entity_metadata, output_path=output_path)
 
-        with open(output_path, 'r') as csvfile:
+        with open(output_path, "r") as csvfile:
             reader = csv.DictReader(csvfile)
             rows = list(reader)
 
         # Find function row
-        func_row = next((r for r in rows if r['name'] == 'my_function'), None)
+        func_row = next((r for r in rows if r["name"] == "my_function"), None)
         assert func_row is not None
-        assert func_row['type'] == 'function'
-        assert func_row['parent_module'] == 'module.py'
-        assert func_row['lines'] == '15'
+        assert func_row["type"] == "function"
+        assert func_row["parent_module"] == "module.py"
+        assert func_row["lines"] == "15"
 
         # Find class row
-        class_row = next((r for r in rows if r['name'] == 'MyClass'), None)
+        class_row = next((r for r in rows if r["name"] == "MyClass"), None)
         assert class_row is not None
-        assert class_row['type'] == 'class'
-        assert class_row['lines'] == '50'
+        assert class_row["type"] == "class"
+        assert class_row["lines"] == "50"
 
         pathlib.Path(output_path).unlink()
 
@@ -451,24 +445,24 @@ class TestCSVExport:
                 "func_c": [],
             },
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             output_path = f.name
 
         export_to_csv(usage_graph, output_path=output_path)
 
-        with open(output_path, 'r') as csvfile:
+        with open(output_path, "r") as csvfile:
             reader = csv.DictReader(csvfile)
             rows = list(reader)
 
         # func_a should have links_out (dependencies)
-        func_a_row = next((r for r in rows if r['name'] == 'func_a'), None)
+        func_a_row = next((r for r in rows if r["name"] == "func_a"), None)
         assert func_a_row is not None
-        assert int(func_a_row['links_out']) >= 2
+        assert int(func_a_row["links_out"]) >= 2
 
         # func_b should have links_in (being depended on)
-        func_b_row = next((r for r in rows if r['name'] == 'func_b'), None)
+        func_b_row = next((r for r in rows if r["name"] == "func_b"), None)
         assert func_b_row is not None
-        assert int(func_b_row['links_in']) >= 1
+        assert int(func_b_row["links_in"]) >= 1
 
         pathlib.Path(output_path).unlink()
 
@@ -481,33 +475,33 @@ class TestCSVExport:
         usage_graph = code_graph.usage_graph()
         entity_metadata = code_graph.get_entity_metadata()
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
             output_path = f.name
 
         export_to_csv(usage_graph, entity_metadata=entity_metadata, output_path=output_path)
 
-        with open(output_path, 'r') as csvfile:
+        with open(output_path, "r") as csvfile:
             reader = csv.DictReader(csvfile)
             rows = list(reader)
 
         # Should have modules
-        module_names = [r['name'] for r in rows if r['type'] == 'module']
-        assert 'core.py' in module_names
-        assert 'parser.py' in module_names
-        assert 'main.py' in module_names
-        assert 'vizualyzer.py' in module_names
+        module_names = [r["name"] for r in rows if r["type"] == "module"]
+        assert "core.py" in module_names
+        assert "parser.py" in module_names
+        assert "main.py" in module_names
+        assert "vizualyzer.py" in module_names
 
         # Should have functions and classes
-        types = set(r['type'] for r in rows)
-        assert 'module' in types
-        assert 'function' in types
-        assert 'class' in types
+        types = set(r["type"] for r in rows)
+        assert "module" in types
+        assert "function" in types
+        assert "class" in types
 
         # CodeGraph class should exist
-        codegraph_row = next((r for r in rows if r['name'] == 'CodeGraph'), None)
+        codegraph_row = next((r for r in rows if r["name"] == "CodeGraph"), None)
         assert codegraph_row is not None
-        assert codegraph_row['type'] == 'class'
-        assert codegraph_row['parent_module'] == 'core.py'
-        assert int(codegraph_row['lines']) > 0
+        assert codegraph_row["type"] == "class"
+        assert codegraph_row["parent_module"] == "core.py"
+        assert int(codegraph_row["lines"]) > 0
 
         pathlib.Path(output_path).unlink()

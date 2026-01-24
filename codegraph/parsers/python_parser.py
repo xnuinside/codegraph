@@ -44,9 +44,7 @@ class PythonParser(BaseParser):
         return get_python_paths_list(paths)
 
     def parse_files(self, paths_list: List[str]) -> Dict:
-        self._module_names_set = {
-            os.path.basename(path).replace(".py", "") for path in paths_list
-        }
+        self._module_names_set = {os.path.basename(path).replace(".py", "") for path in paths_list}
         all_data = {}
         for path in paths_list:
             source = self._read_file_content(path)
@@ -121,9 +119,7 @@ class PythonParser(BaseParser):
     def _parse_source(self, source: Text, filename: Text):
         if self._major == 2:
             if ast27 is None:
-                raise ImportError(
-                    "typed_ast is required to parse Python 2 source code."
-                )
+                raise ImportError("typed_ast is required to parse Python 2 source code.")
             return ast27.parse(source, filename=filename, mode="exec")
 
         return self._parse_with_feature_version(source, filename, self._feature_version)
@@ -233,9 +229,7 @@ class PythonParser(BaseParser):
     ) -> List[str]:
         deps: List[str] = []
         ast_mod = self._ast_mod
-        collector = self._make_dependency_collector(
-            local_entities, module_aliases, entity_aliases, ast_mod
-        )
+        collector = self._make_dependency_collector(local_entities, module_aliases, entity_aliases, ast_mod)
         for node in getattr(ast_tree, "body", []):
             if isinstance(node, (ast_mod.FunctionDef, ast_mod.ClassDef)):
                 continue
@@ -259,28 +253,20 @@ class PythonParser(BaseParser):
         if isinstance(node, ast_mod.ClassDef):
             for base in node.bases:
                 if isinstance(base, ast_mod.Attribute):
-                    dep = self._resolve_attribute(
-                        base, local_entities, module_aliases, entity_aliases, ast_mod
-                    )
+                    dep = self._resolve_attribute(base, local_entities, module_aliases, entity_aliases, ast_mod)
                 elif isinstance(base, ast_mod.Name):
-                    dep = self._resolve_name(
-                        base.id, local_entities, module_aliases, entity_aliases
-                    )
+                    dep = self._resolve_name(base.id, local_entities, module_aliases, entity_aliases)
                 else:
                     dep = None
                 if dep:
                     deps.append(dep)
-            collector = self._make_dependency_collector(
-                local_entities, module_aliases, entity_aliases, ast_mod
-            )
+            collector = self._make_dependency_collector(local_entities, module_aliases, entity_aliases, ast_mod)
             for child in node.body:
                 collector.visit(child)
             deps.extend(collector.dependencies)
             return deps
 
-        collector = self._make_dependency_collector(
-            local_entities, module_aliases, entity_aliases, ast_mod
-        )
+        collector = self._make_dependency_collector(local_entities, module_aliases, entity_aliases, ast_mod)
         collector.visit(node)
         deps.extend(collector.dependencies)
         return deps
@@ -311,13 +297,9 @@ class PythonParser(BaseParser):
         ast_mod,
     ) -> Optional[str]:
         if isinstance(func_node, ast_mod.Name):
-            return self._resolve_name(
-                func_node.id, local_entities, module_aliases, entity_aliases
-            )
+            return self._resolve_name(func_node.id, local_entities, module_aliases, entity_aliases)
         if isinstance(func_node, ast_mod.Attribute):
-            return self._resolve_attribute(
-                func_node, local_entities, module_aliases, entity_aliases, ast_mod
-            )
+            return self._resolve_attribute(func_node, local_entities, module_aliases, entity_aliases, ast_mod)
         return None
 
     def _resolve_attribute(

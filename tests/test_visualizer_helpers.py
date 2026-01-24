@@ -42,7 +42,7 @@ def test_get_d3_html_template_replaces_placeholders():
     html = vizualyzer.get_d3_html_template({"nodes": [], "links": [], "unlinkedModules": []})
     assert "STYLES_PLACEHOLDER" not in html
     assert "GRAPH_DATA_PLACEHOLDER" not in html
-    assert "\"nodes\": []" in html
+    assert '"nodes": []' in html
 
 
 def test_draw_graph_writes_file_and_opens_browser(tmp_path, monkeypatch):

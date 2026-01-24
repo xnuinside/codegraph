@@ -18,10 +18,7 @@ def get_paths_list(paths: Union[str, List], extensions: Iterable[str]) -> List[s
         if not path.exists():
             raise ValueError(f"Path {path.as_posix()} does not exist")
         for ext in extensions:
-            paths_list += [
-                Path(p).as_posix()
-                for p in glob.glob(str(path / "**" / f"*{ext}"), recursive=True)
-            ]
+            paths_list += [Path(p).as_posix() for p in glob.glob(str(path / "**" / f"*{ext}"), recursive=True)]
     return paths_list
 
 

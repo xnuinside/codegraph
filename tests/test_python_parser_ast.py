@@ -1,7 +1,5 @@
 from argparse import Namespace
 
-import pytest
-
 from codegraph.core import CodeGraph
 from codegraph.parsers.python_parser import PythonParser
 
@@ -55,7 +53,7 @@ def test_usage_graph_resolves_alias_calls(tmp_path):
     module_a_path = (tmp_path / "module_a.py").as_posix()
     deps = set(usage_graph[module_a_path]["call_all"])
     assert "module_b.foo" in deps
-    assert f"module_b._" in usage_graph[module_a_path]["_"]
+    assert "module_b._" in usage_graph[module_a_path]["_"]
 
 
 def test_class_inheritance_dependency(tmp_path):
@@ -96,7 +94,7 @@ def test_get_lines_numbers(tmp_path):
     _write(
         tmp_path,
         "module_a.py",
-        "\"\"\"module\"\"\"\n\ndef foo():\n    return 1\n\n\ndef bar():\n    return 2\n",
+        '"""module"""\n\ndef foo():\n    return 1\n\n\ndef bar():\n    return 2\n',
     )
     args = Namespace(paths=[tmp_path.as_posix()], language="python")
     code_graph = CodeGraph(args)

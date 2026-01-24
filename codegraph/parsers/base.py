@@ -22,9 +22,7 @@ class BaseParser(ABC):
     def get_entity_metadata(self, modules_data: Dict) -> Dict:
         raise NotImplementedError
 
-    def get_dependencies(
-        self, usage_graph: Dict, file_path: str, distance: int
-    ) -> Dict[int, Set[str]]:
+    def get_dependencies(self, usage_graph: Dict, file_path: str, distance: int) -> Dict[int, Set[str]]:
         """
         Default implementation that expects dependencies as "module.entity".
         Parsers can override this to handle language-specific dependency formats.

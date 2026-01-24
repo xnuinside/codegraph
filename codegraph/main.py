@@ -1,4 +1,4 @@
-""" main module of testsdiffer for console (cli) usage"""
+"""main module of testsdiffer for console (cli) usage"""
 
 import logging
 import pprint
