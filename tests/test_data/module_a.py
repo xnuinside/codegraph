@@ -1,4 +1,5 @@
 """Test module A for multi-module connection testing."""
+
 from tests.test_data import module_b, module_c
 
 

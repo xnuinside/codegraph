@@ -33,8 +33,7 @@ def draw_graph_matplotlib(modules_entities: Dict) -> None:
         import networkx as nx
     except ImportError:
         raise ImportError(
-            "matplotlib is required for matplotlib visualization. "
-            "Install it with: pip install codegraph[matplotlib]"
+            "matplotlib is required for matplotlib visualization. " "Install it with: pip install codegraph[matplotlib]"
         )
 
     G = nx.DiGraph()
@@ -44,9 +43,7 @@ def draw_graph_matplotlib(modules_entities: Dict) -> None:
     sub_edges_all = []
 
     for module in modules_entities:
-        new_module_edges_all, new_edges_all = process_module_in_graph(
-            module, modules_entities[module], G
-        )
+        new_module_edges_all, new_edges_all = process_module_in_graph(module, modules_entities[module], G)
 
         module_edges_all += new_module_edges_all
         sub_edges_all += new_edges_all
@@ -75,9 +72,7 @@ def draw_graph_matplotlib(modules_entities: Dict) -> None:
         alpha=0.8,
     )
 
-    nx.draw_networkx_labels(
-        G, pos, labels=module_list_labels, font_weight="bold", font_size=11
-    )
+    nx.draw_networkx_labels(G, pos, labels=module_list_labels, font_weight="bold", font_size=11)
     nx.draw_networkx_labels(
         G,
         pos,
@@ -154,13 +149,15 @@ def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -
 
         # Add module node
         if module_name not in node_ids:
-            nodes.append({
-                "id": module_name,
-                "type": "module",
-                "collapsed": False,
-                "fullPath": relative_path,
-                "lines": total_lines
-            })
+            nodes.append(
+                {
+                    "id": module_name,
+                    "type": "module",
+                    "collapsed": False,
+                    "fullPath": relative_path,
+                    "lines": total_lines,
+                }
+            )
             node_ids.add(module_name)
 
         # Add entity nodes and build mapping
@@ -175,14 +172,16 @@ def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -
             entity_type = ent_meta.get("entity_type", "function")
 
             if entity_id not in node_ids:
-                nodes.append({
-                    "id": entity_id,
-                    "label": entity_name,
-                    "type": "entity",
-                    "parent": module_name,
-                    "lines": lines,
-                    "entityType": entity_type
-                })
+                nodes.append(
+                    {
+                        "id": entity_id,
+                        "label": entity_name,
+                        "type": "entity",
+                        "parent": module_name,
+                        "lines": lines,
+                        "entityType": entity_type,
+                    }
+                )
                 node_ids.add(entity_id)
 
     # Second pass: create all links
@@ -193,11 +192,7 @@ def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -
             entity_id = f"{module_name}:{entity_name}"
 
             # Link from module to entity
-            links.append({
-                "source": module_name,
-                "target": entity_id,
-                "type": "module-entity"
-            })
+            links.append({"source": module_name, "target": entity_id, "type": "module-entity"})
 
             # Links from entity to dependencies
             for dep in dependencies:
@@ -234,11 +229,7 @@ def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -
 
                 if dep_target and dep_target in node_ids:
                     # Link to existing entity
-                    links.append({
-                        "source": entity_id,
-                        "target": dep_target,
-                        "type": "dependency"
-                    })
+                    links.append({"source": entity_id, "target": dep_target, "type": "dependency"})
                     # Add module-to-module link if different modules
                     if dep_module and dep_module != module_name:
                         link_key = (module_name, dep_module)
@@ -247,26 +238,14 @@ def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -
                 else:
                     # Add as external dependency node
                     if dep_entity not in node_ids:
-                        nodes.append({
-                            "id": dep_entity,
-                            "type": "external",
-                            "label": dep_entity
-                        })
+                        nodes.append({"id": dep_entity, "type": "external", "label": dep_entity})
                         node_ids.add(dep_entity)
 
-                    links.append({
-                        "source": entity_id,
-                        "target": dep_entity,
-                        "type": "dependency"
-                    })
+                    links.append({"source": entity_id, "target": dep_entity, "type": "dependency"})
 
     # Add module-to-module links
     for source_module, target_module in module_links:
-        links.append({
-            "source": source_module,
-            "target": target_module,
-            "type": "module-module"
-        })
+        links.append({"source": source_module, "target": target_module, "type": "module-module"})
 
     # Find unlinked modules (no connections at all - neither incoming nor outgoing)
     all_modules = {n["id"] for n in nodes if n["type"] == "module"}
@@ -277,8 +256,7 @@ def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -
     # Modules with any connection
     linked_modules = modules_with_outgoing | modules_with_incoming
     unlinked_modules = [
-        {"id": m, "fullPath": module_full_paths.get(m, m)}
-        for m in sorted(all_modules - linked_modules)
+        {"id": m, "fullPath": module_full_paths.get(m, m)} for m in sorted(all_modules - linked_modules)
     ]
 
     return {"nodes": nodes, "links": links, "unlinkedModules": unlinked_modules}
@@ -286,13 +264,13 @@ def convert_to_d3_format(modules_entities: Dict, entity_metadata: Dict = None) -
 
 def _get_template_dir() -> str:
     """Get the path to the templates directory."""
-    return os.path.join(os.path.dirname(__file__), 'templates')
+    return os.path.join(os.path.dirname(__file__), "templates")
 
 
 def _read_template_file(filename: str) -> str:
     """Read a template file from the templates directory."""
     template_path = os.path.join(_get_template_dir(), filename)
-    with open(template_path, 'r', encoding='utf-8') as f:
+    with open(template_path, "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -301,14 +279,14 @@ def get_d3_html_template(graph_data: Dict) -> str:
     graph_json = json.dumps(graph_data, indent=2)
 
     # Read template files
-    html_template = _read_template_file('index.html')
-    css_content = _read_template_file('styles.css')
-    js_content = _read_template_file('main.js')
+    html_template = _read_template_file("index.html")
+    css_content = _read_template_file("styles.css")
+    js_content = _read_template_file("main.js")
 
     # Replace placeholders
-    html_content = html_template.replace('/* STYLES_PLACEHOLDER */', css_content)
-    html_content = html_content.replace('/* GRAPH_DATA_PLACEHOLDER */', graph_json)
-    html_content = html_content.replace('/* SCRIPT_PLACEHOLDER */', js_content)
+    html_content = html_template.replace("/* STYLES_PLACEHOLDER */", css_content)
+    html_content = html_content.replace("/* GRAPH_DATA_PLACEHOLDER */", graph_json)
+    html_content = html_content.replace("/* SCRIPT_PLACEHOLDER */", js_content)
 
     return html_content
 
@@ -332,14 +310,15 @@ def draw_graph(modules_entities: Dict, entity_metadata: Dict = None, output_path
     output_path = os.path.abspath(output_path)
 
     # Save to file
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_content)
 
     # Open in default browser
-    webbrowser.open(f'file://{output_path}')
+    webbrowser.open(f"file://{output_path}")
 
     # Import click here to avoid circular imports and only when needed
     import click
+
     click.echo(f"Interactive graph saved and opened in browser: {output_path}")
 
 
@@ -381,8 +360,8 @@ def export_to_csv(modules_entities: Dict, entity_metadata: Dict = None, output_p
     output_path = os.path.abspath(output_path)
 
     # Write CSV
-    with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['name', 'type', 'parent_module', 'full_path', 'links_out', 'links_in', 'lines']
+    with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
+        fieldnames = ["name", "type", "parent_module", "full_path", "links_out", "links_in", "lines"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -415,14 +394,16 @@ def export_to_csv(modules_entities: Dict, entity_metadata: Dict = None, output_p
                 lines = 0
                 name = node.get("label", node_id)
 
-            writer.writerow({
-                'name': name,
-                'type': display_type,
-                'parent_module': parent_module,
-                'full_path': full_path,
-                'links_out': links_out.get(node_id, 0),
-                'links_in': links_in.get(node_id, 0),
-                'lines': lines
-            })
+            writer.writerow(
+                {
+                    "name": name,
+                    "type": display_type,
+                    "parent_module": parent_module,
+                    "full_path": full_path,
+                    "links_out": links_out.get(node_id, 0),
+                    "links_in": links_in.get(node_id, 0),
+                    "lines": lines,
+                }
+            )
 
     click.echo(f"Graph data exported to CSV: {output_path}")

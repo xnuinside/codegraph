@@ -22,3 +22,12 @@ To follow code styles and successfully pass github pipelines install pre-commit 
     pre-commit install
 
 ```
+
+### Formatting and linting
+
+Before committing changes, run the formatter and linter:
+
+```
+    black .
+    ruff check .
+```

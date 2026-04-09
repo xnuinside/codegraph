@@ -33,9 +33,7 @@ def draw_graph(modules_entities: Dict) -> None:
     sub_edges_all = []
 
     for module in modules_entities:
-        new_module_edges_all, new_edges_all = process_module_in_graph(
-            module, modules_entities[module], G
-        )
+        new_module_edges_all, new_edges_all = process_module_in_graph(module, modules_entities[module], G)
 
         module_edges_all += new_module_edges_all
         sub_edges_all += new_edges_all
@@ -64,9 +62,7 @@ def draw_graph(modules_entities: Dict) -> None:
         alpha=0.8,
     )
 
-    nx.draw_networkx_labels(
-        G, pos, labels=module_list_labels, font_weight="bold", font_size=11
-    )
+    nx.draw_networkx_labels(G, pos, labels=module_list_labels, font_weight="bold", font_size=11)
     nx.draw_networkx_labels(
         G,
         pos,

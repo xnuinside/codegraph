@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-24
+
+### Added
+
+- Pluggable parser architecture with registry and base parser interface
+- Rust parser stub to establish language extension points
+- AST-based Python parser with cross-version parsing support (Python 2.x via typed-ast)
+- CLI options for language selection and target Python version
+- Expanded test coverage for parsers, registry/utils, visualizer helpers, and legacy parser objects
+
+### Changed
+
+- Core now delegates parsing and dependency analysis to language parsers
+- Python dependency detection now uses AST rather than token scanning
+- Utilities now support multi-extension file discovery
+
+### Fixed
+
+- Legacy parser now handles comma-separated imports in a single statement
+- Removed known false positives from string literals and alias leakage (AST parser)
+
 ## [1.2.0] - 2026-01-18
 
 ### Added

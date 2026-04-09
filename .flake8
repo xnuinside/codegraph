@@ -1,8 +1,0 @@
-[flake8]
-exclude = .github,.git,__pycache__,docs/source/conf.py,old,build,dist,.tox,*.egg-info
-ignore = D100, D103, D101, D102, D104, D107, D403, D210, D400, D401, W503, W293, D205
-max-complexity = 10
-max-line-length = 120
-per-file-ignores =
-    __init__.py:F401
-    codegraph/vizualyzer.py:E501

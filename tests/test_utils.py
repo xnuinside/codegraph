@@ -15,7 +15,19 @@ def test_get_python_paths_list():
     base_path = pathlib.Path(__file__).parents[1] / "codegraph"
     expected = [
         (base_path / x).as_posix()
-        for x in ["__init__.py", "core.py", "parser.py", "utils.py", "vizualyzer.py", "main.py"]
+        for x in [
+            "__init__.py",
+            "core.py",
+            "parser.py",
+            "utils.py",
+            "vizualyzer.py",
+            "main.py",
+            "parsers/__init__.py",
+            "parsers/base.py",
+            "parsers/python_parser.py",
+            "parsers/registry.py",
+            "parsers/rust_parser.py",
+        ]
     ]
     result = get_python_paths_list(base_path.as_posix())
     assert sorted(result) == sorted(expected)

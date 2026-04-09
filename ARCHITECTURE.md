@@ -14,7 +14,12 @@ codegraph/
 │   ├── __init__.py         # Package init, version definition
 │   ├── main.py             # CLI entry point (click-based)
 │   ├── core.py             # Core graph building logic
-│   ├── parser.py           # Python source code parser
+│   ├── parser.py           # Python token parser (legacy, used by PythonParser)
+│   ├── parsers/            # Pluggable language parsers
+│   │   ├── base.py          # Parser interface
+│   │   ├── python_parser.py # Python parser implementation
+│   │   ├── rust_parser.py   # Rust parser stub
+│   │   ├── registry.py      # Parser registry / discovery
 │   ├── utils.py            # Utility functions
 │   └── vizualyzer.py       # Visualization (D3.js + matplotlib)
 ├── tests/                  # Test suite
@@ -30,9 +35,25 @@ codegraph/
 
 ## Core Components
 
-### 1. Parser (`codegraph/parser.py`)
+### 1. Parser Layer (`codegraph/parsers/`)
 
-The parser uses Python's `tokenize` module to extract code structure from source files.
+Parser implementations are pluggable via a registry. Each parser exposes:
+- `get_source_files()` for language-specific file discovery
+- `parse_files()` to produce module objects
+- `usage_graph()` to build dependencies
+- `get_entity_metadata()` for entity stats
+
+This allows adding new languages without changing core graph orchestration.
+
+#### Python Parser (`codegraph/parsers/python_parser.py`)
+
+Uses Python's `ast` (and `typed_ast` for Python 2.x) to extract classes, functions,
+imports, and line ranges.
+
+#### Rust Parser (`codegraph/parsers/rust_parser.py`)
+
+Currently a stub to establish extension points. The intent is to parse `.rs` files,
+extract functions/structs/impl blocks, and build dependency edges using a Rust-aware parser.
 
 **Key Classes:**
 - `_Object` - Base class for all parsed objects (lineno, endno, name, parent)
@@ -52,16 +73,15 @@ The parser uses Python's `tokenize` module to extract code structure from source
 
 ### 2. Core (`codegraph/core.py`)
 
-The core module builds the dependency graph from parsed data.
+The core module orchestrates parsing and visualization by delegating language-specific
+work to the selected parser.
 
 **Key Classes:**
 - `CodeGraph` - Main class that orchestrates graph building
 
 **Key Functions:**
-- `get_code_objects(paths_list)` - Parse all files and return dict of module → objects
-- `get_imports_and_entities_lines()` - Extract imports and entity line ranges
-- `collect_entities_usage_in_modules()` - Find where entities are used
-- `search_entity_usage()` - Check if entity is used in a line
+- `usage_graph()` - Delegates to the active parser
+- `get_entity_metadata()` - Delegates to the active parser
 
 **Data Flow:**
 ```
