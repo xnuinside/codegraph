@@ -81,6 +81,22 @@ def _nest_function(ob, func_name, lineno, async_f=False):
     return newfunc
 
 
+def _close_scopes(stack: List, endno: int, indent: int) -> None:
+    """Pop every scope closed at ``indent``, finalising ``endno``.
+
+    Scopes popped here never reach the DEDENT handler, so their ``endno``
+    would stay ``None``: a one-line ``def f(): ...`` has no indented body,
+    and whatever is still open at EOF gets no DEDENT either. A ``None``
+    end line later blows up ``core.usage_graph`` with
+    ``TypeError: '<=' not supported between instances of 'int' and
+    'NoneType'``.
+    """
+    while stack and stack[-1][1] >= indent:
+        ob = stack.pop()[0]
+        if isinstance(ob, _Object) and ob.endno is None:
+            ob.endno = endno
+
+
 def _nest_class(ob, class_name, lineno, super=None):
     "Return a Class after nesting within ob."
     newclass = Class(class_name, super, ob.file, lineno, ob)
@@ -197,13 +213,16 @@ def create_objects_array(fname, source):  # noqa: C901
                     for module in modules:
                         imports.add(module)
             elif token == "async":
+                end_line = start[0] - 1 - new_lines
                 new_lines = 0
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
-                while stack and stack[-1][1] >= thisindent:
-                    del stack[-1]
-                # next will be def
-                _, _, _ = next(g)[0:3]
+                _close_scopes(stack, end_line, thisindent)
+                # next must be 'def': 'async for' / 'async with' are not
+                # function definitions and must not be parsed as such.
+                _, next_token, _ = next(g)[0:3]
+                if next_token != "def":
+                    continue
                 # we need method name
                 tokentype, func_name, start = next(g)[0:3]
                 if tokentype != NAME:
@@ -214,14 +233,16 @@ def create_objects_array(fname, source):  # noqa: C901
                     cur_func = _nest_function(cur_obj, func_name, lineno, async_f=True)
                     cur_obj.endno = lineno - new_lines
                 else:
-                    tree.append(AsyncFunction(func_name, fname, lineno))
-                stack.append((cur_func, thisindent))
+                    cur_func = AsyncFunction(func_name, fname, lineno)
+                    tree.append(cur_func)
+                if cur_func:
+                    stack.append((cur_func, thisindent))
             elif token == "def":
+                end_line = start[0] - 1 - new_lines
                 new_lines = 0
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
-                while stack and stack[-1][1] >= thisindent:
-                    del stack[-1]
+                _close_scopes(stack, end_line, thisindent)
                 tokentype, func_name, start = next(g)[0:3]
                 if tokentype != NAME:
                     continue  # Skip def with syntax error.
@@ -235,11 +256,11 @@ def create_objects_array(fname, source):  # noqa: C901
                 if cur_func:
                     stack.append((cur_func, thisindent))
             elif token == "class":
+                end_line = start[0] - 1 - new_lines
                 new_lines = 0
                 lineno, thisindent = start
                 # Close previous nested classes and defs.
-                while stack and stack[-1][1] >= thisindent:
-                    del stack[-1]
+                _close_scopes(stack, end_line, thisindent)
                 tokentype, class_name, start = next(g)[0:3]
 
                 if tokentype != NAME:
@@ -289,6 +310,9 @@ def create_objects_array(fname, source):  # noqa: C901
 
     except StopIteration:
         pass
+
+    # EOF: whatever is still open never got a DEDENT - close it explicitly.
+    _close_scopes(stack, len(source.splitlines()), 0)
 
     f.close()
     if imports:

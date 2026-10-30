@@ -132,8 +132,17 @@ class CodeGraph:
         dependencies = {i: set() for i in range(1, distance + 1)}
         graph = self.usage_graph()
 
+        # graph keys are absolute paths - accept a relative --file-path too
+        file_path = os.path.abspath(file_path)
+
         if file_path not in graph:
             return dependencies
+
+        # basename -> full paths, so an edge can be followed past distance 1
+        # (edges carry a bare "<module>.py" name, which is not a graph key)
+        paths_by_name = defaultdict(list)
+        for path in graph:
+            paths_by_name[os.path.basename(path)].append(path)
 
         queue = deque([(file_path, 0)])
         visited = set()
@@ -150,10 +159,21 @@ class CodeGraph:
                 for entity, used_entities in graph[current_file].items():
                     for used_entity in used_entities:
                         if "." in used_entity:
-                            dependent_file = used_entity.split(".")[0] + ".py"
-                            if dependent_file != current_file:
-                                dependencies[current_distance + 1].add(dependent_file)
-                                queue.append((dependent_file, current_distance + 1))
+                            dependent_file = str(used_entity).split(".")[0] + ".py"
+                            candidates = [
+                                path
+                                for path in paths_by_name[dependent_file]
+                                if path != current_file
+                            ]
+                            if not candidates:
+                                continue
+                            dependencies[current_distance + 1].add(dependent_file)
+                            if len(candidates) == 1:
+                                # An ambiguous name (there can be hundreds of
+                                # __init__.py) would fan the BFS out to
+                                # unrelated modules - only follow edges that
+                                # resolve to exactly one file.
+                                queue.append((candidates[0], current_distance + 1))
 
         return dependencies
 
@@ -190,7 +210,7 @@ def get_imports_and_entities_lines(  # noqa: C901
         # for each module in list
         if code_objects[path] and isinstance(code_objects[path][-1], Import):
             # extract imports if exist
-            for import_ in code_objects[path].pop(-1).modules:
+            for import_ in code_objects[path][-1].modules:
                 pathed_import = import_
                 alias = None
                 if " as " in pathed_import:
@@ -232,6 +252,11 @@ def get_imports_and_entities_lines(  # noqa: C901
                             break
 
         for entity in code_objects[path]:
+            if isinstance(entity, Import):
+                # the Import object is kept on the list on purpose - popping it
+                # made usage_graph() non-idempotent (a second call silently
+                # lost every import-derived edge).
+                continue
             # create a dict with lines of start and end for each entity in module
             entities_lines[path][(entity.lineno, entity.endno)] = entity.name
     return entities_lines, imports, names_map
@@ -241,6 +266,8 @@ def search_entities_from_list_in_code(
     entities_list: List, module_name: Text, line: Text
 ) -> Text:
     for entity in entities_list:
+        if isinstance(entity, Import):
+            continue
         if search_entity_usage(module_name, entity.name, line):
             yield entity
 
@@ -317,6 +344,8 @@ def populate_free_nodes(code_objects: Dict, dependencies: Dict, imports: Dict, m
                     dependencies[path]["_"].append(import_dep)
 
         for entity in code_objects[path]:
+            if isinstance(entity, Import):
+                continue
             if entity.name not in dependencies[path]:
                 dependencies[path][entity.name] = []
 
@@ -347,6 +376,8 @@ def populate_free_nodes(code_objects: Dict, dependencies: Dict, imports: Dict, m
                         # If not found in imports, check if it's a local class
                         if not base_found:
                             for local_entity in code_objects[path]:
+                                if isinstance(local_entity, Import):
+                                    continue
                                 if local_entity.name == base_class:
                                     # It's a local class, add without module prefix
                                     dependencies[path][entity.name].append(base_class)
